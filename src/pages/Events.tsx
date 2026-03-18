@@ -17,7 +17,7 @@ export default function Events() {
   const { calendarIds } = useApp()
   const { lang, s } = useLang()
   const isRtl = lang === 'he'
-  const weekStartsOn = (isRtl ? 0 : 1) as 0 | 1
+  const weekStartsOn = 0 as const
 
   const today = startOfDay(new Date())
   const [view, setView] = useState<ViewMode>('month')
@@ -125,6 +125,44 @@ export default function Events() {
   // Week row
   const weekStart = startOfWeek(navDate, { weekStartsOn })
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+
+  function EventCard({ ev }: { ev: FamilyEvent }) {
+    const meta = EVENT_TYPES[ev.type]
+    const typeLabel = lang === 'he' ? meta.heLabel : meta.label
+    return (
+      <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl mt-0.5">{meta.emoji}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-900 text-sm truncate">{ev.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {ev.allDay ? s.allDay : `${format(new Date(ev.start), 'HH:mm')}–${format(new Date(ev.end), 'HH:mm')}`}
+                </p>
+                {ev.location && (
+                  <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                    <MapPin size={10} /> {ev.location}
+                  </p>
+                )}
+                {ev.notes && <p className="text-xs text-gray-500 mt-1 italic">{ev.notes}</p>}
+              </div>
+              <button
+                onClick={() => handleDelete(ev)}
+                disabled={deleting === ev.id}
+                className="p-1.5 text-gray-300 hover:text-red-400 rounded-lg flex-shrink-0 transition-colors"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+            <span className={`inline-block mt-2 text-xs font-medium px-2 py-0.5 rounded-full border ${meta.color}`}>
+              {typeLabel}
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   function DayDots({ day }: { day: Date }) {
     const evs = eventsOnDay(day)
@@ -236,16 +274,42 @@ export default function Events() {
         )}
       </div>
 
-      {/* Selected day label (week/month only) */}
-      {view !== 'day' && (
+      {/* Selected day label (day/month only) */}
+      {view !== 'week' && view !== 'day' && (
         <p className="text-sm font-semibold text-gray-700">{selectedLabel}</p>
       )}
 
-      {/* Events list for selected day */}
+      {/* Events list */}
       {loading ? (
         <div className="space-y-2">
           {[1, 2].map(i => <div key={i} className="bg-white rounded-2xl h-16 animate-pulse shadow-sm" />)}
         </div>
+      ) : view === 'week' ? (
+        // Week view: show all events grouped by day
+        events.length === 0 ? (
+          <div className="bg-white rounded-2xl p-5 text-center shadow-sm">
+            <p className="text-gray-400 text-sm">{s.noEventsDay}</p>
+            <button onClick={() => setShowModal(true)} className="mt-2 text-sm text-indigo-600 font-medium hover:text-indigo-800">
+              {s.scheduleSomething}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {weekDays.map(day => {
+              const dayEvs = eventsOnDay(day)
+              if (dayEvs.length === 0) return null
+              const dayLbl = isToday(day) ? s.today : format(day, lang === 'he' ? 'EEEE, d/M' : 'EEEE, MMM d')
+              return (
+                <div key={day.toISOString()}>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">{dayLbl}</p>
+                  <div className="space-y-2">
+                    {dayEvs.map(ev => <EventCard key={ev.id} ev={ev} />)}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
       ) : dayEvents.length === 0 ? (
         <div className="bg-white rounded-2xl p-5 text-center shadow-sm">
           <p className="text-gray-400 text-sm">{s.noEventsDay}</p>
@@ -255,43 +319,7 @@ export default function Events() {
         </div>
       ) : (
         <div className="space-y-2">
-          {dayEvents.map(ev => {
-            const meta = EVENT_TYPES[ev.type]
-            const typeLabel = lang === 'he' ? meta.heLabel : meta.label
-            return (
-              <div key={ev.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl mt-0.5">{meta.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-gray-900 text-sm truncate">{ev.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {ev.allDay ? s.allDay : `${format(new Date(ev.start), 'HH:mm')}–${format(new Date(ev.end), 'HH:mm')}`}
-                        </p>
-                        {ev.location && (
-                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                            <MapPin size={10} /> {ev.location}
-                          </p>
-                        )}
-                        {ev.notes && <p className="text-xs text-gray-500 mt-1 italic">{ev.notes}</p>}
-                      </div>
-                      <button
-                        onClick={() => handleDelete(ev)}
-                        disabled={deleting === ev.id}
-                        className="p-1.5 text-gray-300 hover:text-red-400 rounded-lg flex-shrink-0 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                    <span className={`inline-block mt-2 text-xs font-medium px-2 py-0.5 rounded-full border ${meta.color}`}>
-                      {typeLabel}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+          {dayEvents.map(ev => <EventCard key={ev.id} ev={ev} />)}
         </div>
       )}
 

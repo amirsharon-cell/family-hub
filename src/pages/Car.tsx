@@ -34,7 +34,7 @@ export default function Car() {
   const { calendarIds } = useApp()
   const { lang, s } = useLang()
   const isRtl = lang === 'he'
-  const weekStartsOn = (isRtl ? 0 : 1) as 0 | 1
+  const weekStartsOn = 0 as const
 
   const today = startOfDay(new Date())
   const [view, setView] = useState<ViewMode>('week')

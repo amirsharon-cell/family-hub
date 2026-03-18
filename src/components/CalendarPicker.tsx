@@ -22,11 +22,8 @@ export default function CalendarPicker({ value, onChange, minDate }: Props) {
   const monthLabel = `${s.calMonths[viewMonth.getMonth()]} ${viewMonth.getFullYear()}`
 
   const days = eachDayOfInterval({ start: startOfMonth(viewMonth), end: endOfMonth(viewMonth) })
-  // Hebrew: Sunday-first (Israeli standard), getDay() returns 0=Sun already
-  // English: Monday-first, shift so Mon=0
-  const startPad = isRtl
-    ? getDay(startOfMonth(viewMonth))
-    : (getDay(startOfMonth(viewMonth)) + 6) % 7
+  // Both Hebrew and English use Sunday-first (Israeli standard)
+  const startPad = getDay(startOfMonth(viewMonth))
 
   return (
     <div>

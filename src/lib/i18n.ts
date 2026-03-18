@@ -113,7 +113,7 @@ const strings = {
     endAfterStartBooking: 'End time must be after start time.',
 
     // Calendar
-    calDays: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] as string[],
+    calDays: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as string[],
     calMonths: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] as string[],
 
     // Date labels
