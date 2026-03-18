@@ -3,21 +3,24 @@ import { format, startOfDay, addDays, addMonths, isToday, isTomorrow } from 'dat
 import { Plus, Trash2, MapPin } from 'lucide-react'
 import { fetchEvents, deleteFamilyEvent } from '../lib/google'
 import { useApp } from '../App'
+import { useLang } from '../App'
 import type { FamilyEvent } from '../types'
 import { EVENT_TYPES } from '../types'
+import type { Strings } from '../lib/i18n'
 import EventModal from '../components/EventModal'
 
 type Range = '7d' | '30d' | '3m'
 
-function dayLabel(dateStr: string) {
+function dayLabel(dateStr: string, s: Strings, lang: string) {
   const d = new Date(dateStr)
-  if (isToday(d)) return 'Today'
-  if (isTomorrow(d)) return 'Tomorrow'
-  return format(d, 'EEE, MMM d')
+  if (isToday(d)) return s.today
+  if (isTomorrow(d)) return s.tomorrow
+  return format(d, lang === 'he' ? 'EEE, d/M' : 'EEE, MMM d')
 }
 
 export default function Events() {
   const { calendarIds } = useApp()
+  const { lang, s } = useLang()
   const [events, setEvents] = useState<FamilyEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [range, setRange] = useState<Range>('30d')
@@ -45,7 +48,7 @@ export default function Events() {
   useEffect(() => { load() }, [calendarIds, range])
 
   async function handleDelete(ev: FamilyEvent) {
-    if (!calendarIds || !confirm(`Delete "${ev.title}"?`)) return
+    if (!calendarIds || !confirm(s.deleteEvent(ev.title))) return
     setDeleting(ev.id)
     try {
       await deleteFamilyEvent(calendarIds.events, ev.id)
@@ -58,21 +61,21 @@ export default function Events() {
   }
 
   const rangeButtons: { label: string; value: Range }[] = [
-    { label: '7 days', value: '7d' },
-    { label: '30 days', value: '30d' },
-    { label: '3 months', value: '3m' },
+    { label: s.days7, value: '7d' },
+    { label: s.days30, value: '30d' },
+    { label: s.months3, value: '3m' },
   ]
 
   return (
     <div className="p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between pt-2">
-        <h1 className="text-xl font-bold text-gray-900">Events</h1>
+        <h1 className="text-xl font-bold text-gray-900">{s.eventsTitle}</h1>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-1.5 bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors"
         >
-          <Plus size={16} /> Add
+          <Plus size={16} /> {s.add}
         </button>
       </div>
 
@@ -103,18 +106,19 @@ export default function Events() {
       ) : events.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
           <div className="text-4xl mb-3">📅</div>
-          <p className="text-gray-500 text-sm">No events in this range</p>
+          <p className="text-gray-500 text-sm">{s.noEventsRange}</p>
           <button
             onClick={() => setShowModal(true)}
             className="mt-3 text-sm text-indigo-600 font-medium hover:text-indigo-800"
           >
-            Schedule something →
+            {s.scheduleSomething}
           </button>
         </div>
       ) : (
         <div className="space-y-2">
           {events.map((ev) => {
             const meta = EVENT_TYPES[ev.type]
+            const typeLabel = lang === 'he' ? meta.heLabel : meta.label
             return (
               <div key={ev.id} className="bg-white rounded-2xl p-4 shadow-sm">
                 <div className="flex items-start gap-3">
@@ -124,7 +128,7 @@ export default function Events() {
                       <div className="min-w-0">
                         <p className="font-semibold text-gray-900 text-sm truncate">{ev.title}</p>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          {dayLabel(ev.start)}
+                          {dayLabel(ev.start, s, lang)}
                           {!ev.allDay && (
                             <> · {format(new Date(ev.start), 'HH:mm')}–{format(new Date(ev.end), 'HH:mm')}</>
                           )}
@@ -147,7 +151,7 @@ export default function Events() {
                       </button>
                     </div>
                     <span className={`inline-block mt-2 text-xs font-medium px-2 py-0.5 rounded-full border ${meta.color}`}>
-                      {meta.label}
+                      {typeLabel}
                     </span>
                   </div>
                 </div>

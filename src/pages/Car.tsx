@@ -3,6 +3,7 @@ import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, isToday, addDays, i
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { fetchCarBookings, deleteCarBooking } from '../lib/google'
 import { useApp } from '../App'
+import { useLang } from '../App'
 import type { CarBooking } from '../types'
 import BookingModal from '../components/BookingModal'
 
@@ -26,6 +27,8 @@ function colorForEmail(email: string) {
 
 export default function Car() {
   const { calendarIds } = useApp()
+  const { lang, s } = useLang()
+  const isRtl = lang === 'he'
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [bookings, setBookings] = useState<CarBooking[]>([])
   const [loading, setLoading] = useState(true)
@@ -55,7 +58,7 @@ export default function Car() {
   useEffect(() => { load() }, [calendarIds, weekStart])
 
   async function handleDelete(b: CarBooking) {
-    if (!calendarIds || !confirm(`Delete booking "${b.purpose}"?`)) return
+    if (!calendarIds || !confirm(s.deleteBooking(b.purpose))) return
     setDeleting(b.id)
     try {
       await deleteCarBooking(calendarIds.car, b.id)
@@ -67,16 +70,19 @@ export default function Car() {
     }
   }
 
+  // Day abbreviations from i18n (Mon-Sun order)
+  const dayAbbrevs = s.calDays
+
   return (
     <div className="p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between pt-2">
-        <h1 className="text-xl font-bold text-gray-900">🚗 Family Car</h1>
+        <h1 className="text-xl font-bold text-gray-900">{s.carPageTitle}</h1>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-1.5 bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors"
         >
-          <Plus size={16} /> Book
+          <Plus size={16} /> {s.bookCar}
         </button>
       </div>
 
@@ -84,31 +90,31 @@ export default function Car() {
       <div className="bg-white rounded-2xl p-3 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <button
-            onClick={() => setWeekStart((w) => subWeeks(w, 1))}
+            onClick={() => setWeekStart((w) => isRtl ? addWeeks(w, 1) : subWeeks(w, 1))}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
           >
-            <ChevronLeft size={18} />
+            {isRtl ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
           <span className="text-sm font-semibold text-gray-700">
-            {format(weekStart, 'MMM d')} – {format(weekEnd, 'MMM d, yyyy')}
+            {format(weekStart, 'd/M')} – {format(weekEnd, 'd/M/yyyy')}
           </span>
           <button
-            onClick={() => setWeekStart((w) => addWeeks(w, 1))}
+            onClick={() => setWeekStart((w) => isRtl ? subWeeks(w, 1) : addWeeks(w, 1))}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
           >
-            <ChevronRight size={18} />
+            {isRtl ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
           </button>
         </div>
 
-        {/* Day columns */}
-        <div className="grid grid-cols-7 gap-1">
-          {days.map((day) => {
+        {/* Day columns — always LTR so grid stays Mon→Sun */}
+        <div className="grid grid-cols-7 gap-1" dir="ltr">
+          {days.map((day, i) => {
             const dayBookings = bookings.filter((b) => isSameDay(new Date(b.start), day))
             const today = isToday(day)
             return (
               <div key={day.toISOString()} className="flex flex-col items-center gap-1">
                 <span className={`text-xs font-medium ${today ? 'text-indigo-600' : 'text-gray-400'}`}>
-                  {format(day, 'EEE')}
+                  {dayAbbrevs[i]}
                 </span>
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
@@ -144,12 +150,12 @@ export default function Car() {
       ) : bookings.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
           <div className="text-4xl mb-3">🚗</div>
-          <p className="text-gray-500 text-sm">No bookings this week</p>
+          <p className="text-gray-500 text-sm">{s.noBookingsWeek}</p>
           <button
             onClick={() => setShowModal(true)}
             className="mt-3 text-sm text-indigo-600 font-medium hover:text-indigo-800"
           >
-            Book the car →
+            {s.bookTheCarArrow}
           </button>
         </div>
       ) : (
@@ -162,7 +168,7 @@ export default function Car() {
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 text-sm truncate">{b.purpose}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {format(new Date(b.start), 'EEE, MMM d · HH:mm')}
+                      {format(new Date(b.start), 'd/M · HH:mm')}
                       {' – '}
                       {format(new Date(b.end), 'HH:mm')}
                     </p>

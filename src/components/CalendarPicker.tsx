@@ -4,6 +4,7 @@ import {
   getDay, subMonths, addMonths, isSameDay, isToday, isBefore, startOfDay,
 } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useLang } from '../App'
 
 interface Props {
   value: Date
@@ -12,11 +13,16 @@ interface Props {
 }
 
 export default function CalendarPicker({ value, onChange, minDate }: Props) {
+  const { lang, s } = useLang()
   const [viewMonth, setViewMonth] = useState(startOfMonth(value))
 
   const days = eachDayOfInterval({ start: startOfMonth(viewMonth), end: endOfMonth(viewMonth) })
-  // Monday-first: Sun=0 → pad 6, Mon=1 → pad 0, …
-  const startPad = (getDay(startOfMonth(viewMonth)) + 6) % 7
+  const startPad = (getDay(startOfMonth(viewMonth)) + 6) % 7  // Monday-first
+
+  // Hebrew: prev month is on the right, next is on the left (RTL layout handles position,
+  // but we flip the chevron icons so they point in the correct reading direction)
+  const isRtl = lang === 'he'
+  const monthLabel = `${s.calMonths[viewMonth.getMonth()]} ${viewMonth.getFullYear()}`
 
   return (
     <div>
@@ -24,32 +30,32 @@ export default function CalendarPicker({ value, onChange, minDate }: Props) {
       <div className="flex items-center justify-between mb-3">
         <button
           type="button"
-          onClick={() => setViewMonth(m => subMonths(m, 1))}
+          onClick={() => setViewMonth(m => isRtl ? addMonths(m, 1) : subMonths(m, 1))}
           className="p-1.5 rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
+          aria-label={isRtl ? 'חודש הבא' : 'Previous month'}
         >
-          <ChevronLeft size={16} />
+          {isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
-        <span className="text-sm font-semibold text-gray-800">
-          {format(viewMonth, 'MMMM yyyy')}
-        </span>
+        <span className="text-sm font-semibold text-gray-800">{monthLabel}</span>
         <button
           type="button"
-          onClick={() => setViewMonth(m => addMonths(m, 1))}
+          onClick={() => setViewMonth(m => isRtl ? subMonths(m, 1) : addMonths(m, 1))}
           className="p-1.5 rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
+          aria-label={isRtl ? 'חודש קודם' : 'Next month'}
         >
-          <ChevronRight size={16} />
+          {isRtl ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
         </button>
       </div>
 
       {/* Day-of-week headers */}
       <div className="grid grid-cols-7 mb-1">
-        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(d => (
-          <div key={d} className="text-center text-xs font-medium text-gray-400 pb-1">{d}</div>
+        {s.calDays.map((d, i) => (
+          <div key={i} className="text-center text-xs font-medium text-gray-400 pb-1">{d}</div>
         ))}
       </div>
 
-      {/* Day grid */}
-      <div className="grid grid-cols-7 gap-y-1">
+      {/* Day grid — always LTR so the grid layout stays left-to-right */}
+      <div className="grid grid-cols-7 gap-y-1" dir="ltr">
         {Array.from({ length: startPad }).map((_, i) => <div key={`pad-${i}`} />)}
         {days.map(day => {
           const selected = isSameDay(day, value)

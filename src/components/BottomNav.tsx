@@ -1,14 +1,17 @@
 import { NavLink } from 'react-router-dom'
 import { Home, Calendar, Car, Settings } from 'lucide-react'
-
-const tabs = [
-  { to: '/', icon: Home, label: 'Home' },
-  { to: '/events', icon: Calendar, label: 'Events' },
-  { to: '/car', icon: Car, label: 'Car' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
-]
+import { useLang } from '../App'
 
 export default function BottomNav() {
+  const { s } = useLang()
+
+  const tabs = [
+    { to: '/', icon: Home, label: s.navHome },
+    { to: '/events', icon: Calendar, label: s.navEvents },
+    { to: '/car', icon: Car, label: s.navCar },
+    { to: '/settings', icon: Settings, label: s.navSettings },
+  ]
+
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 pb-safe z-50">
       <div className="flex">

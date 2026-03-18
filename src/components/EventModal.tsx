@@ -3,6 +3,7 @@ import { format, set } from 'date-fns'
 import { X } from 'lucide-react'
 import { createFamilyEvent } from '../lib/google'
 import { useApp } from '../App'
+import { useLang } from '../App'
 import type { EventType } from '../types'
 import { EVENT_TYPES } from '../types'
 import CalendarPicker from './CalendarPicker'
@@ -20,6 +21,7 @@ export default function EventModal({
   onSaved: () => void
 }) {
   const { calendarIds, user } = useApp()
+  const { lang, s } = useLang()
   const now = new Date()
 
   const [title, setTitle] = useState('')
@@ -35,7 +37,7 @@ export default function EventModal({
   const [error, setError] = useState('')
 
   async function handleSave() {
-    if (!calendarIds || !title.trim()) { setError('Title is required.'); return }
+    if (!calendarIds || !title.trim()) { setError(s.titleRequired); return }
 
     let startISO: string
     let endISO: string
@@ -47,7 +49,7 @@ export default function EventModal({
     } else {
       const start = timeToDate(date, startTime)
       const end = timeToDate(date, endTime)
-      if (end <= start) { setError('End time must be after start time.'); return }
+      if (end <= start) { setError(s.endAfterStart); return }
       startISO = start.toISOString()
       endISO = end.toISOString()
     }
@@ -85,7 +87,7 @@ export default function EventModal({
         <div className="p-5 space-y-5">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">Add Event</h2>
+            <h2 className="text-lg font-bold text-gray-900">{s.addEvent}</h2>
             <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400">
               <X size={20} />
             </button>
@@ -98,14 +100,14 @@ export default function EventModal({
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            placeholder="Event title…"
+            placeholder={s.eventTitlePlaceholder}
             autoFocus
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
           {/* Type chips */}
           <div>
-            <p className="text-xs font-medium text-gray-500 mb-2">Type</p>
+            <p className="text-xs font-medium text-gray-500 mb-2">{s.eventType}</p>
             <div className="flex flex-wrap gap-2">
               {(Object.entries(EVENT_TYPES) as [EventType, typeof EVENT_TYPES[EventType]][]).map(([key, meta]) => (
                 <button
@@ -117,7 +119,7 @@ export default function EventModal({
                     type === key ? meta.color : 'border-gray-200 text-gray-500 hover:border-gray-300 bg-white',
                   ].join(' ')}
                 >
-                  {meta.emoji} {meta.label}
+                  {meta.emoji} {lang === 'he' ? meta.heLabel : meta.label}
                 </button>
               ))}
             </div>
@@ -132,13 +134,13 @@ export default function EventModal({
             >
               <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${allDay ? 'translate-x-5' : 'translate-x-1'}`} />
             </button>
-            <span className="text-sm text-gray-700">All day</span>
+            <span className="text-sm text-gray-700">{s.allDay}</span>
           </div>
 
           {/* Start date calendar */}
           <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50">
             <p className="text-xs font-medium text-gray-500 mb-3">
-              {allDay ? 'Start date' : 'Date'}
+              {allDay ? s.startDate : s.dateLabel}
             </p>
             <CalendarPicker value={date} onChange={setDate} />
           </div>
@@ -147,7 +149,7 @@ export default function EventModal({
           {!allDay && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Start time</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">{s.startTime}</label>
                 <input
                   type="time"
                   value={startTime}
@@ -156,7 +158,7 @@ export default function EventModal({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">End time</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1">{s.endTime}</label>
                 <input
                   type="time"
                   value={endTime}
@@ -170,7 +172,7 @@ export default function EventModal({
           {/* End date — all-day multi-day */}
           {allDay && (
             <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50">
-              <p className="text-xs font-medium text-gray-500 mb-3">End date</p>
+              <p className="text-xs font-medium text-gray-500 mb-3">{s.endDate}</p>
               <CalendarPicker
                 value={endDate >= date ? endDate : date}
                 onChange={setEndDate}
@@ -184,7 +186,7 @@ export default function EventModal({
             type="text"
             value={location}
             onChange={e => setLocation(e.target.value)}
-            placeholder="Location (optional)"
+            placeholder={s.locationPlaceholder}
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
@@ -193,7 +195,7 @@ export default function EventModal({
             value={notes}
             onChange={e => setNotes(e.target.value)}
             rows={2}
-            placeholder="Notes (optional)"
+            placeholder={s.notesPlaceholder}
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
           />
 
@@ -202,7 +204,7 @@ export default function EventModal({
             disabled={saving || !title.trim()}
             className="w-full bg-indigo-600 text-white rounded-xl py-3.5 font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
           >
-            {saving ? 'Saving…' : 'Add to Calendar'}
+            {saving ? s.saving : s.addToCalendar}
           </button>
         </div>
       </div>

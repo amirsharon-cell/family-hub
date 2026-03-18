@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { initAuth, getUserInfo, signOut as gSignOut } from './lib/google'
+import { getStrings } from './lib/i18n'
+import type { Lang, Strings } from './lib/i18n'
 import type { User, CalendarIds } from './types'
 import Login from './pages/Login'
 import Setup from './pages/Setup'
@@ -10,7 +12,7 @@ import Car from './pages/Car'
 import Settings from './pages/Settings'
 import BottomNav from './components/BottomNav'
 
-// ─── Context ──────────────────────────────────────────────────────────────────
+// ─── App context ──────────────────────────────────────────────────────────────
 
 interface AppContextType {
   user: User | null
@@ -22,6 +24,17 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType>({} as AppContextType)
 export const useApp = () => useContext(AppContext)
+
+// ─── Language context ─────────────────────────────────────────────────────────
+
+interface LangContextType {
+  lang: Lang
+  setLang: (l: Lang) => void
+  s: Strings
+}
+
+const LangContext = createContext<LangContextType>({} as LangContextType)
+export const useLang = () => useContext(LangContext)
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
@@ -37,6 +50,23 @@ export default function App() {
       return null
     }
   })
+  const [lang, setLangState] = useState<Lang>(() => {
+    const saved = localStorage.getItem('family-hub-lang')
+    if (saved === 'en' || saved === 'he') return saved
+    // Default to Hebrew, or match browser language
+    return navigator.language.startsWith('he') ? 'he' : 'he'
+  })
+
+  // Apply dir + lang to the document whenever language changes
+  useEffect(() => {
+    document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr'
+    document.documentElement.lang = lang
+  }, [lang])
+
+  function setLang(l: Lang) {
+    setLangState(l)
+    localStorage.setItem('family-hub-lang', l)
+  }
 
   const onToken = useCallback(async (newToken: string | null) => {
     if (newToken) {
@@ -77,33 +107,36 @@ export default function App() {
   }
 
   const basename = import.meta.env.BASE_URL.replace(/\/$/, '')
+  const s = getStrings(lang)
 
   return (
-    <AppContext.Provider value={{ user, token, calendarIds, setCalendarIds, handleSignOut }}>
-      <BrowserRouter basename={basename}>
-        {!token ? (
-          <Routes>
-            <Route path="*" element={<Login />} />
-          </Routes>
-        ) : !calendarIds ? (
-          <Routes>
-            <Route path="*" element={<Setup />} />
-          </Routes>
-        ) : (
-          <div className="max-w-md mx-auto min-h-screen bg-gray-50 flex flex-col relative">
-            <div className="flex-1 overflow-y-auto pb-20">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/events" element={<Events />} />
-                <Route path="/car" element={<Car />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+    <LangContext.Provider value={{ lang, setLang, s }}>
+      <AppContext.Provider value={{ user, token, calendarIds, setCalendarIds, handleSignOut }}>
+        <BrowserRouter basename={basename}>
+          {!token ? (
+            <Routes>
+              <Route path="*" element={<Login />} />
+            </Routes>
+          ) : !calendarIds ? (
+            <Routes>
+              <Route path="*" element={<Setup />} />
+            </Routes>
+          ) : (
+            <div className="max-w-md mx-auto min-h-screen bg-gray-50 flex flex-col relative">
+              <div className="flex-1 overflow-y-auto pb-20">
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/events" element={<Events />} />
+                  <Route path="/car" element={<Car />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </div>
+              <BottomNav />
             </div>
-            <BottomNav />
-          </div>
-        )}
-      </BrowserRouter>
-    </AppContext.Provider>
+          )}
+        </BrowserRouter>
+      </AppContext.Provider>
+    </LangContext.Provider>
   )
 }

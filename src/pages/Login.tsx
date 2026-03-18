@@ -1,27 +1,25 @@
 import { signIn } from '../lib/google'
+import { useLang } from '../App'
 
 export default function Login() {
+  const { s } = useLang()
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center p-6">
       <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm text-center">
         <div className="text-6xl mb-4">🏠</div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Family Hub</h1>
-        <p className="text-gray-500 text-sm mb-8">
-          Shared calendar &amp; resources for your family
-        </p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">{s.appName}</h1>
+        <p className="text-gray-500 text-sm mb-8">{s.appSubtitle}</p>
 
         <button
           onClick={signIn}
           className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
         >
           <GoogleLogo />
-          Sign in with Google
+          {s.signIn}
         </button>
 
-        <p className="mt-6 text-xs text-gray-400">
-          Family Hub uses Google Calendar to store your events.
-          No data is stored outside of your Google account.
-        </p>
+        <p className="mt-6 text-xs text-gray-400">{s.appPrivacy}</p>
       </div>
     </div>
   )

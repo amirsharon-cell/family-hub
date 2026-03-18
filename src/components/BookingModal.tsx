@@ -3,6 +3,7 @@ import { format, set, areIntervalsOverlapping, startOfDay } from 'date-fns'
 import { X, AlertTriangle } from 'lucide-react'
 import { createCarBooking } from '../lib/google'
 import { useApp } from '../App'
+import { useLang } from '../App'
 import type { CarBooking } from '../types'
 import CalendarPicker from './CalendarPicker'
 
@@ -21,6 +22,7 @@ export default function BookingModal({
   onSaved: () => void
 }) {
   const { calendarIds, user } = useApp()
+  const { s } = useLang()
   const now = new Date()
 
   const [purpose, setPurpose] = useState('')
@@ -44,8 +46,8 @@ export default function BookingModal({
     : []
 
   async function handleSave() {
-    if (!calendarIds || !purpose.trim()) { setError('Purpose is required.'); return }
-    if (!validTimes) { setError('End time must be after start time.'); return }
+    if (!calendarIds || !purpose.trim()) { setError(s.purposeRequired); return }
+    if (!validTimes) { setError(s.endAfterStartBooking); return }
     setSaving(true)
     setError('')
     try {
@@ -75,7 +77,7 @@ export default function BookingModal({
         <div className="p-5 space-y-5">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">🚗 Book the Car</h2>
+            <h2 className="text-lg font-bold text-gray-900">{s.bookCarTitle}</h2>
             <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400">
               <X size={20} />
             </button>
@@ -88,7 +90,7 @@ export default function BookingModal({
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-2">
               <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-amber-700">
-                <p className="font-medium">Scheduling conflict!</p>
+                <p className="font-medium">{s.conflict}</p>
                 {conflicts.map(c => (
                   <p key={c.id} className="text-xs mt-0.5">
                     {c.bookedByName}: {format(new Date(c.start), 'HH:mm')}–{format(new Date(c.end), 'HH:mm')} · {c.purpose}
@@ -103,21 +105,21 @@ export default function BookingModal({
             type="text"
             value={purpose}
             onChange={e => setPurpose(e.target.value)}
-            placeholder="Purpose (e.g. School pickup)"
+            placeholder={s.purposePlaceholder}
             autoFocus
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
           {/* Date calendar */}
           <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50">
-            <p className="text-xs font-medium text-gray-500 mb-3">Date</p>
+            <p className="text-xs font-medium text-gray-500 mb-3">{s.datePickerLabel}</p>
             <CalendarPicker value={date} onChange={setDate} minDate={startOfDay(now)} />
           </div>
 
           {/* Time inputs */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{s.from}</label>
               <input
                 type="time"
                 value={startTime}
@@ -126,7 +128,7 @@ export default function BookingModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Until</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{s.until}</label>
               <input
                 type="time"
                 value={endTime}
@@ -146,7 +148,7 @@ export default function BookingModal({
                 : 'bg-indigo-600 text-white hover:bg-indigo-700',
             ].join(' ')}
           >
-            {saving ? 'Saving…' : conflicts.length > 0 ? 'Book anyway' : 'Book Car'}
+            {saving ? s.saving : conflicts.length > 0 ? s.bookAnyway : s.bookCarBtn}
           </button>
         </div>
       </div>
