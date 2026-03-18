@@ -30,13 +30,14 @@ export default function Car() {
   const { calendarIds } = useApp()
   const { lang, s } = useLang()
   const isRtl = lang === 'he'
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const weekStartsOn = isRtl ? 0 : 1  // Hebrew: Sunday-first; English: Monday-first
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: isRtl ? 0 : 1 }))
   const [bookings, setBookings] = useState<CarBooking[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
 
-  const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
+  const weekEnd = endOfWeek(weekStart, { weekStartsOn })
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
   const load = async () => {

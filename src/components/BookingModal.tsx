@@ -74,10 +74,10 @@ export default function BookingModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-t-3xl w-full max-w-md max-h-[92vh] overflow-y-auto"
+        className="bg-white rounded-t-3xl w-full max-w-md max-h-[92vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-5 space-y-5">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 min-h-0">
           {/* Header */}
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900">{s.bookCarTitle}</h2>
@@ -163,6 +163,9 @@ export default function BookingModal({
             </div>
           </div>
 
+        </div>
+        {/* Sticky save button — always visible regardless of scroll */}
+        <div className="px-5 pb-5 pt-3 border-t border-gray-100 bg-white">
           <button
             onClick={handleSave}
             disabled={saving || !purpose.trim()}

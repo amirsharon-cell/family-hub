@@ -216,7 +216,7 @@ const strings = {
     purposeRequired: 'נדרשת מטרה.',
     endAfterStartBooking: 'שעת הסיום חייבת להיות אחרי שעת ההתחלה.',
 
-    calDays: ['ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'ש\'', 'א\''] as string[],
+    calDays: ['א\'', 'ב\'', 'ג\'', 'ד\'', 'ה\'', 'ו\'', 'ש\''] as string[],  // Sun-first (Israeli standard)
     calMonths: ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'] as string[],
 
     today: 'היום',
