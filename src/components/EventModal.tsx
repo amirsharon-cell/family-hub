@@ -204,7 +204,7 @@ export default function EventModal({
         <div className="px-5 pb-5 pt-3 border-t border-gray-100 bg-white">
           <button
             onClick={handleSave}
-            disabled={saving || !title.trim()}
+            disabled={saving}
             className="w-full bg-indigo-600 text-white rounded-xl py-3.5 font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
           >
             {saving ? s.saving : s.addToCalendar}
