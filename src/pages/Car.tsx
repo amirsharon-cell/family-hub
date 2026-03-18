@@ -135,9 +135,7 @@ export default function Car() {
   const weekStartDate = startOfWeek(navDate, { weekStartsOn })
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStartDate, i))
   const monthDays = eachDayOfInterval({ start: startOfMonth(navDate), end: endOfMonth(navDate) })
-  const startPad = isRtl
-    ? getDay(startOfMonth(navDate))
-    : (getDay(startOfMonth(navDate)) + 6) % 7
+  const startPad = getDay(startOfMonth(navDate)) // always Sunday-first
 
   function DayBtn({ day }: { day: Date }) {
     const bks = bookingsOnDay(day)

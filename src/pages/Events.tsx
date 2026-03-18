@@ -118,9 +118,7 @@ export default function Events() {
 
   // Month grid
   const monthDays = eachDayOfInterval({ start: startOfMonth(navDate), end: endOfMonth(navDate) })
-  const startPad = isRtl
-    ? getDay(startOfMonth(navDate))
-    : (getDay(startOfMonth(navDate)) + 6) % 7
+  const startPad = getDay(startOfMonth(navDate)) // always Sunday-first
 
   // Week row
   const weekStart = startOfWeek(navDate, { weekStartsOn })
