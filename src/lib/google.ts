@@ -1,4 +1,5 @@
-import type { FamilyEvent, CarBooking } from '../types'
+import { EVENT_TYPES } from '../types'
+import type { FamilyEvent, CarBooking, EventType } from '../types'
 
 const CLIENT_ID = '953894951691-4i23ee5aoks1iehjisg6m1nmhbjl8bkl.apps.googleusercontent.com'
 const SCOPES = 'https://www.googleapis.com/auth/calendar openid profile email'
@@ -119,13 +120,12 @@ interface GCalEvent {
   end: { dateTime?: string; date?: string }
 }
 
-function parseEventType(desc: string | undefined): FamilyEvent['type'] {
+function parseEventType(desc: string | undefined): EventType {
   try {
-    const meta = JSON.parse(desc ?? '{}')
-    return meta.type ?? 'other'
-  } catch {
-    return 'other'
-  }
+    const meta = JSON.parse(desc ?? '{}') as { type?: string }
+    if (meta.type && meta.type in EVENT_TYPES) return meta.type as EventType
+  } catch { /* ignore */ }
+  return 'other'
 }
 
 function toFamilyEvent(e: GCalEvent): FamilyEvent {

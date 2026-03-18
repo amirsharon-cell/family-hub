@@ -1,13 +1,15 @@
 import { useState } from 'react'
-import { format, addHours } from 'date-fns'
+import { format, set } from 'date-fns'
 import { X } from 'lucide-react'
 import { createFamilyEvent } from '../lib/google'
 import { useApp } from '../App'
-import type { FamilyEvent } from '../types'
+import type { EventType } from '../types'
 import { EVENT_TYPES } from '../types'
+import CalendarPicker from './CalendarPicker'
 
-function toLocalInputValue(date: Date) {
-  return format(date, "yyyy-MM-dd'T'HH:mm")
+function timeToDate(base: Date, time: string): Date {
+  const [h, m] = time.split(':').map(Number)
+  return set(base, { hours: h, minutes: m, seconds: 0, milliseconds: 0 })
 }
 
 export default function EventModal({
@@ -19,12 +21,14 @@ export default function EventModal({
 }) {
   const { calendarIds, user } = useApp()
   const now = new Date()
-  now.setMinutes(0, 0, 0)
+
   const [title, setTitle] = useState('')
-  const [type, setType] = useState<FamilyEvent['type']>('dinner')
-  const [start, setStart] = useState(toLocalInputValue(addHours(now, 1)))
-  const [end, setEnd] = useState(toLocalInputValue(addHours(now, 3)))
+  const [type, setType] = useState<EventType>('dinner')
+  const [date, setDate] = useState(now)
+  const [startTime, setStartTime] = useState('19:00')
+  const [endTime, setEndTime] = useState('21:00')
   const [allDay, setAllDay] = useState(false)
+  const [endDate, setEndDate] = useState(now)
   const [location, setLocation] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
@@ -32,14 +36,30 @@ export default function EventModal({
 
   async function handleSave() {
     if (!calendarIds || !title.trim()) { setError('Title is required.'); return }
+
+    let startISO: string
+    let endISO: string
+
+    if (allDay) {
+      startISO = format(date, 'yyyy-MM-dd')
+      const ed = endDate >= date ? endDate : date
+      endISO = format(ed, 'yyyy-MM-dd')
+    } else {
+      const start = timeToDate(date, startTime)
+      const end = timeToDate(date, endTime)
+      if (end <= start) { setError('End time must be after start time.'); return }
+      startISO = start.toISOString()
+      endISO = end.toISOString()
+    }
+
     setSaving(true)
     setError('')
     try {
       await createFamilyEvent(calendarIds.events, {
         title: title.trim(),
         type,
-        start: allDay ? start.slice(0, 10) : new Date(start).toISOString(),
-        end: allDay ? end.slice(0, 10) : new Date(end).toISOString(),
+        start: startISO,
+        end: endISO,
         allDay,
         location: location.trim() || undefined,
         notes: notes.trim() || undefined,
@@ -54,114 +74,137 @@ export default function EventModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
-        className="bg-white rounded-t-3xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-t-3xl w-full max-w-md max-h-[92vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">Add Event</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400">
-            <X size={20} />
-          </button>
-        </div>
+        <div className="p-5 space-y-5">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900">Add Event</h2>
+            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400">
+              <X size={20} />
+            </button>
+          </div>
 
-        {error && <p className="text-red-600 text-sm bg-red-50 rounded-xl p-3">{error}</p>}
+          {error && <p className="text-red-600 text-sm bg-red-50 rounded-xl p-3">{error}</p>}
 
-        {/* Title */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Title *</label>
+          {/* Title */}
           <input
             type="text"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Family dinner at Nonna's"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Event title…"
+            autoFocus
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
-        </div>
 
-        {/* Type */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-2">Type</label>
-          <div className="flex flex-wrap gap-2">
-            {(Object.entries(EVENT_TYPES) as [FamilyEvent['type'], typeof EVENT_TYPES[keyof typeof EVENT_TYPES]][]).map(([key, meta]) => (
-              <button
-                key={key}
-                onClick={() => setType(key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                  type === key ? meta.color : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                }`}
-              >
-                {meta.emoji} {meta.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* All day toggle */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setAllDay((v) => !v)}
-            className={`w-10 h-6 rounded-full transition-colors relative ${allDay ? 'bg-indigo-600' : 'bg-gray-200'}`}
-          >
-            <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${allDay ? 'translate-x-5' : 'translate-x-1'}`} />
-          </button>
-          <span className="text-sm text-gray-700">All day</span>
-        </div>
-
-        {/* Date/time */}
-        <div className="grid grid-cols-2 gap-3">
+          {/* Type chips */}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Start</label>
-            <input
-              type={allDay ? 'date' : 'datetime-local'}
-              value={allDay ? start.slice(0, 10) : start}
-              onChange={(e) => setStart(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+            <p className="text-xs font-medium text-gray-500 mb-2">Type</p>
+            <div className="flex flex-wrap gap-2">
+              {(Object.entries(EVENT_TYPES) as [EventType, typeof EVENT_TYPES[EventType]][]).map(([key, meta]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setType(key)}
+                  className={[
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors',
+                    type === key ? meta.color : 'border-gray-200 text-gray-500 hover:border-gray-300 bg-white',
+                  ].join(' ')}
+                >
+                  {meta.emoji} {meta.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">End</label>
-            <input
-              type={allDay ? 'date' : 'datetime-local'}
-              value={allDay ? end.slice(0, 10) : end}
-              onChange={(e) => setEnd(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
 
-        {/* Location */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Location (optional)</label>
+          {/* All-day toggle */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setAllDay(v => !v)}
+              className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${allDay ? 'bg-indigo-600' : 'bg-gray-200'}`}
+            >
+              <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${allDay ? 'translate-x-5' : 'translate-x-1'}`} />
+            </button>
+            <span className="text-sm text-gray-700">All day</span>
+          </div>
+
+          {/* Start date calendar */}
+          <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50">
+            <p className="text-xs font-medium text-gray-500 mb-3">
+              {allDay ? 'Start date' : 'Date'}
+            </p>
+            <CalendarPicker value={date} onChange={setDate} />
+          </div>
+
+          {/* Time inputs — non-all-day */}
+          {!allDay && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Start time</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={e => setStartTime(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">End time</label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={e => setEndTime(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* End date — all-day multi-day */}
+          {allDay && (
+            <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50">
+              <p className="text-xs font-medium text-gray-500 mb-3">End date</p>
+              <CalendarPicker
+                value={endDate >= date ? endDate : date}
+                onChange={setEndDate}
+                minDate={date}
+              />
+            </div>
+          )}
+
+          {/* Location */}
           <input
             type="text"
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g. Central Park"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onChange={e => setLocation(e.target.value)}
+            placeholder="Location (optional)"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
-        </div>
 
-        {/* Notes */}
-        <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Notes (optional)</label>
+          {/* Notes */}
           <textarea
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            onChange={e => setNotes(e.target.value)}
             rows={2}
-            placeholder="Any details…"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            placeholder="Notes (optional)"
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
           />
-        </div>
 
-        <button
-          onClick={handleSave}
-          disabled={saving || !title.trim()}
-          className="w-full bg-indigo-600 text-white rounded-xl py-3 font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-        >
-          {saving ? 'Saving…' : 'Add to Calendar'}
-        </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !title.trim()}
+            className="w-full bg-indigo-600 text-white rounded-xl py-3.5 font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {saving ? 'Saving…' : 'Add to Calendar'}
+          </button>
+        </div>
       </div>
     </div>
   )
