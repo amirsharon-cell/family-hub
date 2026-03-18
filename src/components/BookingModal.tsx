@@ -70,7 +70,7 @@ export default function BookingModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -165,7 +165,7 @@ export default function BookingModal({
 
         </div>
         {/* Sticky save button — always visible regardless of scroll */}
-        <div className="px-5 pb-5 pt-3 border-t border-gray-100 bg-white">
+        <div className="px-5 pb-5 pt-3 pb-safe border-t border-gray-100 bg-white">
           <button
             onClick={handleSave}
             disabled={saving || !purpose.trim()}
