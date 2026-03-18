@@ -4,7 +4,7 @@ import {
   getDay, addMonths, subMonths, isSameDay, isToday, startOfDay,
   addDays, subDays, startOfWeek, endOfWeek,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, Trash2, MapPin } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil, MapPin } from 'lucide-react'
 import { fetchEvents, deleteFamilyEvent } from '../lib/google'
 import { useApp, useLang } from '../App'
 import type { FamilyEvent } from '../types'
@@ -26,6 +26,7 @@ export default function Events() {
   const [events, setEvents] = useState<FamilyEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<FamilyEvent | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
   const load = async () => {
@@ -155,13 +156,21 @@ export default function Events() {
                 )}
                 {ev.notes && <p className="text-xs text-gray-500 mt-1 italic">{ev.notes}</p>}
               </div>
-              <button
-                onClick={() => handleDelete(ev)}
-                disabled={deleting === ev.id}
-                className="p-1.5 text-gray-300 hover:text-red-400 rounded-lg flex-shrink-0 transition-colors"
-              >
-                <Trash2 size={14} />
-              </button>
+              <div className="flex gap-1 flex-shrink-0">
+                <button
+                  onClick={() => setEditingEvent(ev)}
+                  className="p-1.5 text-gray-300 hover:text-indigo-500 rounded-lg transition-colors"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => handleDelete(ev)}
+                  disabled={deleting === ev.id}
+                  className="p-1.5 text-gray-300 hover:text-red-400 rounded-lg transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
             <span className={`inline-block mt-2 text-xs font-medium px-2 py-0.5 rounded-full border ${meta.color}`}>
               {typeLabel}
@@ -338,6 +347,13 @@ export default function Events() {
         <EventModal
           onClose={() => setShowModal(false)}
           onSaved={() => { setShowModal(false); load() }}
+        />
+      )}
+      {editingEvent && (
+        <EventModal
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onSaved={() => { setEditingEvent(null); load() }}
         />
       )}
     </div>

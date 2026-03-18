@@ -4,7 +4,7 @@ import {
   startOfWeek, endOfWeek, addDays, subDays,
   addMonths, subMonths, isToday, isSameDay, startOfDay,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil } from 'lucide-react'
 import { fetchCarBookings, deleteCarBooking } from '../lib/google'
 import { useApp, useLang } from '../App'
 import type { CarBooking } from '../types'
@@ -43,6 +43,7 @@ export default function Car() {
   const [bookings, setBookings] = useState<CarBooking[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [editingBooking, setEditingBooking] = useState<CarBooking | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
   const load = async () => {
@@ -154,13 +155,21 @@ export default function Car() {
             </p>
             <p className="text-xs text-gray-400 mt-0.5">{b.bookedByName}</p>
           </div>
-          <button
-            onClick={() => handleDelete(b)}
-            disabled={deleting === b.id}
-            className="p-1.5 text-gray-300 hover:text-red-400 rounded-lg flex-shrink-0 transition-colors"
-          >
-            <Trash2 size={14} />
-          </button>
+          <div className="flex gap-1 flex-shrink-0">
+            <button
+              onClick={() => setEditingBooking(b)}
+              className="p-1.5 text-gray-300 hover:text-indigo-500 rounded-lg transition-colors"
+            >
+              <Pencil size={14} />
+            </button>
+            <button
+              onClick={() => handleDelete(b)}
+              disabled={deleting === b.id}
+              className="p-1.5 text-gray-300 hover:text-red-400 rounded-lg transition-colors"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -326,6 +335,14 @@ export default function Car() {
           existingBookings={bookings}
           onClose={() => setShowModal(false)}
           onSaved={() => { setShowModal(false); load() }}
+        />
+      )}
+      {editingBooking && (
+        <BookingModal
+          existingBookings={bookings}
+          booking={editingBooking}
+          onClose={() => setEditingBooking(null)}
+          onSaved={() => { setEditingBooking(null); load() }}
         />
       )}
     </div>

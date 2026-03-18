@@ -84,6 +84,8 @@ const strings = {
 
     // Event Modal
     addEvent: 'Add Event',
+    editEvent: 'Edit Event',
+    editBooking: 'Edit Booking',
     eventTitlePlaceholder: 'Event title…',
     eventType: 'Type',
     allDay: 'All day',
@@ -199,6 +201,8 @@ const strings = {
     language: 'שפה',
 
     addEvent: 'הוסף אירוע',
+    editEvent: 'ערוך אירוע',
+    editBooking: 'ערוך הזמנה',
     eventTitlePlaceholder: 'שם האירוע…',
     eventType: 'סוג',
     allDay: 'כל היום',

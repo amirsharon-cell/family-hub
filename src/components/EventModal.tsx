@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { format, set } from 'date-fns'
 import { X } from 'lucide-react'
-import { createFamilyEvent } from '../lib/google'
+import { createFamilyEvent, updateFamilyEvent } from '../lib/google'
 import { useApp } from '../App'
 import { useLang } from '../App'
-import type { EventType } from '../types'
+import type { FamilyEvent, EventType } from '../types'
 import { EVENT_TYPES } from '../types'
 import CalendarPicker from './CalendarPicker'
 
@@ -13,26 +13,41 @@ function timeToDate(base: Date, time: string): Date {
   return set(base, { hours: h, minutes: m, seconds: 0, milliseconds: 0 })
 }
 
+function parseDateStr(dateStr: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  }
+  return new Date(dateStr)
+}
+
 export default function EventModal({
+  event,
   onClose,
   onSaved,
 }: {
+  event?: FamilyEvent
   onClose: () => void
   onSaved: () => void
 }) {
   const { calendarIds, user } = useApp()
   const { lang, s } = useLang()
   const now = new Date()
+  const isEdit = !!event
 
-  const [title, setTitle] = useState('')
-  const [type, setType] = useState<EventType>('dinner')
-  const [date, setDate] = useState(now)
-  const [startTime, setStartTime] = useState('19:00')
-  const [endTime, setEndTime] = useState('21:00')
-  const [allDay, setAllDay] = useState(false)
-  const [endDate, setEndDate] = useState(now)
-  const [location, setLocation] = useState('')
-  const [notes, setNotes] = useState('')
+  const [title, setTitle] = useState(event?.title ?? '')
+  const [type, setType] = useState<EventType>(event?.type ?? 'dinner')
+  const [date, setDate] = useState(event ? parseDateStr(event.start) : now)
+  const [startTime, setStartTime] = useState(
+    event && !event.allDay ? format(new Date(event.start), 'HH:mm') : '19:00'
+  )
+  const [endTime, setEndTime] = useState(
+    event && !event.allDay ? format(new Date(event.end), 'HH:mm') : '21:00'
+  )
+  const [allDay, setAllDay] = useState(event?.allDay ?? false)
+  const [endDate, setEndDate] = useState(event ? parseDateStr(event.end) : now)
+  const [location, setLocation] = useState(event?.location ?? '')
+  const [notes, setNotes] = useState(event?.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -57,7 +72,7 @@ export default function EventModal({
     setSaving(true)
     setError('')
     try {
-      await createFamilyEvent(calendarIds.events, {
+      const payload = {
         title: title.trim(),
         type,
         start: startISO,
@@ -65,8 +80,13 @@ export default function EventModal({
         allDay,
         location: location.trim() || undefined,
         notes: notes.trim() || undefined,
-        createdBy: user?.email ?? '',
-      })
+        createdBy: event?.createdBy ?? user?.email ?? '',
+      }
+      if (isEdit) {
+        await updateFamilyEvent(calendarIds.events, event.id, payload)
+      } else {
+        await createFamilyEvent(calendarIds.events, payload)
+      }
       onSaved()
     } catch (e) {
       setError(String(e))
@@ -87,7 +107,7 @@ export default function EventModal({
         <div className="flex-1 overflow-y-auto p-5 space-y-5 min-h-0">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">{s.addEvent}</h2>
+            <h2 className="text-lg font-bold text-gray-900">{isEdit ? s.editEvent : s.addEvent}</h2>
             <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400">
               <X size={20} />
             </button>
@@ -206,7 +226,7 @@ export default function EventModal({
             disabled={saving}
             className="w-full bg-indigo-600 text-white rounded-xl py-3.5 font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
           >
-            {saving ? s.saving : s.addToCalendar}
+            {saving ? s.saving : isEdit ? s.saveChanges : s.addToCalendar}
           </button>
         </div>
       </div>

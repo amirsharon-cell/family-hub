@@ -199,6 +199,25 @@ export async function createFamilyEvent(
   return toFamilyEvent(created)
 }
 
+export async function updateFamilyEvent(
+  calendarId: string,
+  eventId: string,
+  event: Omit<FamilyEvent, 'id' | 'htmlLink'>
+): Promise<FamilyEvent> {
+  const body = {
+    summary: event.title,
+    description: JSON.stringify({ type: event.type, notes: event.notes ?? '' }),
+    location: event.location,
+    start: event.allDay ? { date: event.start.slice(0, 10) } : { dateTime: event.start },
+    end: event.allDay ? { date: event.end.slice(0, 10) } : { dateTime: event.end },
+  }
+  const updated = await api<GCalEvent>(
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
+    { method: 'PUT', body: JSON.stringify(body) }
+  )
+  return toFamilyEvent(updated)
+}
+
 export async function deleteFamilyEvent(calendarId: string, eventId: string): Promise<void> {
   await api<void>(
     `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
@@ -236,6 +255,24 @@ export async function createCarBooking(
     { method: 'POST', body: JSON.stringify(body) }
   )
   return toCarBooking(created)
+}
+
+export async function updateCarBooking(
+  calendarId: string,
+  eventId: string,
+  booking: { purpose: string; carId: CarId; start: string; end: string; bookedByName: string }
+): Promise<CarBooking> {
+  const body = {
+    summary: `[Car] ${booking.purpose}`,
+    description: JSON.stringify({ purpose: booking.purpose, carId: booking.carId, bookedByName: booking.bookedByName }),
+    start: { dateTime: booking.start },
+    end: { dateTime: booking.end },
+  }
+  const updated = await api<GCalEvent>(
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
+    { method: 'PUT', body: JSON.stringify(body) }
+  )
+  return toCarBooking(updated)
 }
 
 export async function deleteCarBooking(calendarId: string, eventId: string): Promise<void> {

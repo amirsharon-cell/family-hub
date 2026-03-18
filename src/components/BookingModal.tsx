@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { format, set, areIntervalsOverlapping, startOfDay } from 'date-fns'
 import { X, AlertTriangle } from 'lucide-react'
-import { createCarBooking } from '../lib/google'
+import { createCarBooking, updateCarBooking } from '../lib/google'
 import { useApp } from '../App'
 import { useLang } from '../App'
 import type { CarBooking, CarId } from '../types'
@@ -15,22 +15,29 @@ function timeToDate(base: Date, time: string): Date {
 
 export default function BookingModal({
   existingBookings,
+  booking,
   onClose,
   onSaved,
 }: {
   existingBookings: CarBooking[]
+  booking?: CarBooking
   onClose: () => void
   onSaved: () => void
 }) {
   const { calendarIds, user } = useApp()
   const { s } = useLang()
   const now = new Date()
+  const isEdit = !!booking
 
-  const [purpose, setPurpose] = useState('')
-  const [carId, setCarId] = useState<CarId>('kia-ev3')
-  const [date, setDate] = useState(now)
-  const [startTime, setStartTime] = useState('09:00')
-  const [endTime, setEndTime] = useState('10:00')
+  const [purpose, setPurpose] = useState(booking?.purpose ?? '')
+  const [carId, setCarId] = useState<CarId>(booking?.carId ?? 'kia-ev3')
+  const [date, setDate] = useState(booking ? new Date(booking.start) : now)
+  const [startTime, setStartTime] = useState(
+    booking ? format(new Date(booking.start), 'HH:mm') : '09:00'
+  )
+  const [endTime, setEndTime] = useState(
+    booking ? format(new Date(booking.end), 'HH:mm') : '10:00'
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -38,8 +45,11 @@ export default function BookingModal({
   const endDate = timeToDate(date, endTime)
   const validTimes = endDate > startDate
 
+  // Exclude the booking being edited from conflict detection
+  const otherBookings = isEdit ? existingBookings.filter(b => b.id !== booking.id) : existingBookings
+
   const conflicts = validTimes
-    ? existingBookings.filter(b =>
+    ? otherBookings.filter(b =>
         areIntervalsOverlapping(
           { start: startDate, end: endDate },
           { start: new Date(b.start), end: new Date(b.end) }
@@ -53,13 +63,18 @@ export default function BookingModal({
     setSaving(true)
     setError('')
     try {
-      await createCarBooking(calendarIds.car, {
+      const payload = {
         purpose: purpose.trim(),
         carId,
         start: startDate.toISOString(),
         end: endDate.toISOString(),
-        bookedByName: user?.name ?? user?.email ?? '',
-      })
+        bookedByName: booking?.bookedByName ?? user?.name ?? user?.email ?? '',
+      }
+      if (isEdit) {
+        await updateCarBooking(calendarIds.car, booking.id, payload)
+      } else {
+        await createCarBooking(calendarIds.car, payload)
+      }
       onSaved()
     } catch (e) {
       setError(String(e))
@@ -80,7 +95,7 @@ export default function BookingModal({
         <div className="flex-1 overflow-y-auto p-5 space-y-5 min-h-0">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">{s.bookCarTitle}</h2>
+            <h2 className="text-lg font-bold text-gray-900">{isEdit ? s.editBooking : s.bookCarTitle}</h2>
             <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400">
               <X size={20} />
             </button>
@@ -137,7 +152,7 @@ export default function BookingModal({
           {/* Date calendar */}
           <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50">
             <p className="text-xs font-medium text-gray-500 mb-3">{s.datePickerLabel}</p>
-            <CalendarPicker value={date} onChange={setDate} minDate={startOfDay(now)} />
+            <CalendarPicker value={date} onChange={setDate} minDate={isEdit ? undefined : startOfDay(now)} />
           </div>
 
           {/* Time inputs */}
@@ -175,7 +190,7 @@ export default function BookingModal({
                 : 'bg-indigo-600 text-white hover:bg-indigo-700',
             ].join(' ')}
           >
-            {saving ? s.saving : conflicts.length > 0 ? s.bookAnyway : s.bookCarBtn}
+            {saving ? s.saving : isEdit ? s.saveChanges : conflicts.length > 0 ? s.bookAnyway : s.bookCarBtn}
           </button>
         </div>
       </div>
