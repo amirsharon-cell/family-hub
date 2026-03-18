@@ -282,8 +282,8 @@ export default function Events() {
         )}
       </div>
 
-      {/* Selected day label (day/month only) */}
-      {view !== 'week' && view !== 'day' && (
+      {/* Selected day label (day view only) */}
+      {view === 'day' && (
         <p className="text-sm font-semibold text-gray-700">{selectedLabel}</p>
       )}
 
@@ -292,8 +292,22 @@ export default function Events() {
         <div className="space-y-2">
           {[1, 2].map(i => <div key={i} className="bg-white rounded-2xl h-16 animate-pulse shadow-sm" />)}
         </div>
-      ) : view === 'week' ? (
-        // Week view: show all events grouped by day
+      ) : view === 'day' ? (
+        // Day view: selected day's events
+        dayEvents.length === 0 ? (
+          <div className="bg-white rounded-2xl p-5 text-center shadow-sm">
+            <p className="text-gray-400 text-sm">{s.noEventsDay}</p>
+            <button onClick={() => setShowModal(true)} className="mt-2 text-sm text-indigo-600 font-medium hover:text-indigo-800">
+              {s.scheduleSomething}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {dayEvents.map(ev => <EventCard key={ev.id} ev={ev} />)}
+          </div>
+        )
+      ) : (
+        // Week/Month view: all events grouped by day
         events.length === 0 ? (
           <div className="bg-white rounded-2xl p-5 text-center shadow-sm">
             <p className="text-gray-400 text-sm">{s.noEventsDay}</p>
@@ -303,7 +317,7 @@ export default function Events() {
           </div>
         ) : (
           <div className="space-y-4">
-            {weekDays.map(day => {
+            {(view === 'week' ? weekDays : monthDays).map(day => {
               const dayEvs = eventsOnDay(day)
               if (dayEvs.length === 0) return null
               const dayLbl = isToday(day) ? s.today : format(day, lang === 'he' ? 'EEEE, d/M' : 'EEEE, MMM d')
@@ -318,17 +332,6 @@ export default function Events() {
             })}
           </div>
         )
-      ) : dayEvents.length === 0 ? (
-        <div className="bg-white rounded-2xl p-5 text-center shadow-sm">
-          <p className="text-gray-400 text-sm">{s.noEventsDay}</p>
-          <button onClick={() => setShowModal(true)} className="mt-2 text-sm text-indigo-600 font-medium hover:text-indigo-800">
-            {s.scheduleSomething}
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {dayEvents.map(ev => <EventCard key={ev.id} ev={ev} />)}
-        </div>
       )}
 
       {showModal && (
