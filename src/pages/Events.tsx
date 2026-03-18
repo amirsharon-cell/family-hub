@@ -94,11 +94,21 @@ export default function Events() {
     }
   }
 
-  function eventsOnDay(day: Date) {
-    return events.filter(ev => isSameDay(new Date(ev.start), day))
+  // All-day events have start as "YYYY-MM-DD" — new Date() parses that as UTC midnight
+  // which shifts to the previous day in UTC+ timezones. Parse as local midnight instead.
+  function parseStart(dateStr: string): Date {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [y, m, d] = dateStr.split('-').map(Number)
+      return new Date(y, m - 1, d)
+    }
+    return new Date(dateStr)
   }
 
-  const dayEvents = events.filter(ev => isSameDay(new Date(ev.start), selectedDay))
+  function eventsOnDay(day: Date) {
+    return events.filter(ev => isSameDay(parseStart(ev.start), day))
+  }
+
+  const dayEvents = events.filter(ev => isSameDay(parseStart(ev.start), selectedDay))
 
   // Nav title
   let navTitle: string
