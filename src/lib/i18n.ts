@@ -53,6 +53,7 @@ const strings = {
     days30: '30 days',
     months3: '3 months',
     noEventsRange: 'No events in this range',
+    noEventsDay: 'No events',
     scheduleSomething: 'Schedule something →',
 
     // Car
@@ -166,6 +167,7 @@ const strings = {
     days30: '30 ימים',
     months3: '3 חודשים',
     noEventsRange: 'אין אירועים בטווח זה',
+    noEventsDay: 'אין אירועים',
     scheduleSomething: 'תכנן משהו ←',
 
     carPageTitle: '🚗 רכב משפחתי',
