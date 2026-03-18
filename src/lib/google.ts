@@ -1,5 +1,5 @@
-import { EVENT_TYPES } from '../types'
-import type { FamilyEvent, CarBooking, EventType } from '../types'
+import { EVENT_TYPES, CAR_OPTIONS } from '../types'
+import type { FamilyEvent, CarBooking, EventType, CarId } from '../types'
 
 const CLIENT_ID = '953894951691-4i23ee5aoks1iehjisg6m1nmhbjl8bkl.apps.googleusercontent.com'
 const SCOPES = 'https://www.googleapis.com/auth/calendar openid profile email'
@@ -144,17 +144,22 @@ function toFamilyEvent(e: GCalEvent): FamilyEvent {
   }
 }
 
+const VALID_CAR_IDS = new Set<string>(CAR_OPTIONS.map(c => c.id))
+
 function toCarBooking(e: GCalEvent): CarBooking {
   let purpose = e.summary.replace(/^\[Car\]\s*/, '')
   let bookedByName = e.organizer?.displayName ?? e.organizer?.email ?? ''
+  let carId: CarId = 'kia-ev3'
   try {
     const meta = JSON.parse(e.description ?? '{}')
     if (meta.purpose) purpose = meta.purpose
     if (meta.bookedByName) bookedByName = meta.bookedByName
+    if (meta.carId && VALID_CAR_IDS.has(meta.carId)) carId = meta.carId as CarId
   } catch { /* ignore */ }
   return {
     id: e.id,
     purpose,
+    carId,
     start: e.start.dateTime ?? '',
     end: e.end.dateTime ?? '',
     bookedBy: e.organizer?.email ?? '',
@@ -218,11 +223,11 @@ export async function fetchCarBookings(calendarId: string, timeMin: string, time
 
 export async function createCarBooking(
   calendarId: string,
-  booking: { purpose: string; start: string; end: string; bookedByName: string }
+  booking: { purpose: string; carId: CarId; start: string; end: string; bookedByName: string }
 ): Promise<CarBooking> {
   const body = {
     summary: `[Car] ${booking.purpose}`,
-    description: JSON.stringify({ purpose: booking.purpose, bookedByName: booking.bookedByName }),
+    description: JSON.stringify({ purpose: booking.purpose, carId: booking.carId, bookedByName: booking.bookedByName }),
     start: { dateTime: booking.start },
     end: { dateTime: booking.end },
   }

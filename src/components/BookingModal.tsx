@@ -4,7 +4,8 @@ import { X, AlertTriangle } from 'lucide-react'
 import { createCarBooking } from '../lib/google'
 import { useApp } from '../App'
 import { useLang } from '../App'
-import type { CarBooking } from '../types'
+import type { CarBooking, CarId } from '../types'
+import { CAR_OPTIONS } from '../types'
 import CalendarPicker from './CalendarPicker'
 
 function timeToDate(base: Date, time: string): Date {
@@ -26,6 +27,7 @@ export default function BookingModal({
   const now = new Date()
 
   const [purpose, setPurpose] = useState('')
+  const [carId, setCarId] = useState<CarId>('kia-ev3')
   const [date, setDate] = useState(now)
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('10:00')
@@ -53,6 +55,7 @@ export default function BookingModal({
     try {
       await createCarBooking(calendarIds.car, {
         purpose: purpose.trim(),
+        carId,
         start: startDate.toISOString(),
         end: endDate.toISOString(),
         bookedByName: user?.name ?? user?.email ?? '',
@@ -84,6 +87,28 @@ export default function BookingModal({
           </div>
 
           {error && <p className="text-red-600 text-sm bg-red-50 rounded-xl p-3">{error}</p>}
+
+          {/* Car selector */}
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-2">{s.chooseCar}</p>
+            <div className="flex gap-2">
+              {CAR_OPTIONS.map(car => (
+                <button
+                  key={car.id}
+                  type="button"
+                  onClick={() => setCarId(car.id)}
+                  className={[
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-colors',
+                    carId === car.id
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'border-gray-200 text-gray-600 hover:border-indigo-300 bg-white',
+                  ].join(' ')}
+                >
+                  {car.emoji} {car.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Conflict warning */}
           {conflicts.length > 0 && (

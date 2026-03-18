@@ -2,11 +2,33 @@ import { signIn } from '../lib/google'
 import { useLang } from '../App'
 
 export default function Login() {
-  const { s } = useLang()
+  const { lang, setLang, s } = useLang()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center p-6">
       <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm text-center">
+        {/* Language toggle */}
+        <div className="flex justify-center mb-6">
+          <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+            <button
+              onClick={() => setLang('he')}
+              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                lang === 'he' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              עברית
+            </button>
+            <button
+              onClick={() => setLang('en')}
+              className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                lang === 'en' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              English
+            </button>
+          </div>
+        </div>
+
         <div className="text-6xl mb-4">🏠</div>
         <h1 className="text-2xl font-bold text-gray-900 mb-1">{s.appName}</h1>
         <p className="text-gray-500 text-sm mb-8">{s.appSubtitle}</p>

@@ -95,7 +95,8 @@ const strings = {
     endAfterStart: 'End time must be after start time.',
 
     // Booking Modal
-    bookCarTitle: '🚗 Book the Car',
+    bookCarTitle: '🚗 Book a Car',
+    chooseCar: 'Which car?',
     purposePlaceholder: 'Purpose (e.g. School pickup)',
     datePickerLabel: 'Date',
     from: 'From',
@@ -203,7 +204,8 @@ const strings = {
     titleRequired: 'נדרש שם לאירוע.',
     endAfterStart: 'שעת הסיום חייבת להיות אחרי שעת ההתחלה.',
 
-    bookCarTitle: '🚗 הזמן את הרכב',
+    bookCarTitle: '🚗 הזמן רכב',
+    chooseCar: 'איזה רכב?',
     purposePlaceholder: 'מטרה (למשל: הסעה לבית ספר)',
     datePickerLabel: 'תאריך',
     from: 'מ-',

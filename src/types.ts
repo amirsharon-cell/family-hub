@@ -38,9 +38,17 @@ export interface FamilyEvent {
   htmlLink?: string
 }
 
+export const CAR_OPTIONS = [
+  { id: 'kia-ev3', label: 'Kia EV3', emoji: '⚡' },
+  { id: 'aion-v',  label: 'Aion V',  emoji: '🔋' },
+] as const
+
+export type CarId = typeof CAR_OPTIONS[number]['id']
+
 export interface CarBooking {
   id: string
   purpose: string
+  carId: CarId
   start: string
   end: string
   bookedBy: string

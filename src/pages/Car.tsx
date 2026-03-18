@@ -5,6 +5,7 @@ import { fetchCarBookings, deleteCarBooking } from '../lib/google'
 import { useApp } from '../App'
 import { useLang } from '../App'
 import type { CarBooking } from '../types'
+import { CAR_OPTIONS } from '../types'
 import BookingModal from '../components/BookingModal'
 
 const MEMBER_COLORS = [
@@ -162,10 +163,15 @@ export default function Car() {
         <div className="space-y-2">
           {bookings.map((b) => {
             const color = colorForEmail(b.bookedBy)
+            const carOption = CAR_OPTIONS.find(c => c.id === b.carId) ?? CAR_OPTIONS[0]
             return (
               <div key={b.id} className={`rounded-2xl p-4 shadow-sm border ${color} bg-white`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-base">{carOption.emoji}</span>
+                      <span className="text-xs font-semibold text-gray-700">{carOption.label}</span>
+                    </div>
                     <p className="font-semibold text-gray-900 text-sm truncate">{b.purpose}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
                       {format(new Date(b.start), 'd/M · HH:mm')}

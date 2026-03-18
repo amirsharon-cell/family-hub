@@ -5,7 +5,7 @@ import { fetchEvents, fetchCarBookings } from '../lib/google'
 import { useApp } from '../App'
 import { useLang } from '../App'
 import type { FamilyEvent, CarBooking } from '../types'
-import { EVENT_TYPES } from '../types'
+import { EVENT_TYPES, CAR_OPTIONS } from '../types'
 import type { Strings } from '../lib/i18n'
 import EventModal from '../components/EventModal'
 import BookingModal from '../components/BookingModal'
@@ -73,7 +73,11 @@ export default function Home() {
           <Car size={22} className={todayBooking ? 'text-amber-600' : 'text-green-600'} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 text-sm">{s.carTitle}</p>
+          <p className="font-semibold text-gray-900 text-sm">
+            {todayBooking
+              ? (() => { const c = CAR_OPTIONS.find(x => x.id === todayBooking.carId) ?? CAR_OPTIONS[0]; return `${c.emoji} ${c.label}` })()
+              : s.carTitle}
+          </p>
           {todayBooking ? (
             <p className="text-xs text-amber-700 truncate">
               {s.carBooked(
