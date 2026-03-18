@@ -137,6 +137,35 @@ export default function Car() {
   const monthDays = eachDayOfInterval({ start: startOfMonth(navDate), end: endOfMonth(navDate) })
   const startPad = getDay(startOfMonth(navDate)) // always Sunday-first
 
+  function BookingCard({ b }: { b: CarBooking }) {
+    const color = colorForEmail(b.bookedBy)
+    const carOption = CAR_OPTIONS.find(c => c.id === b.carId) ?? CAR_OPTIONS[0]
+    return (
+      <div className={`rounded-2xl p-4 shadow-sm border ${color} bg-white`}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-base">{carOption.emoji}</span>
+              <span className="text-xs font-semibold text-gray-700">{carOption.label}</span>
+            </div>
+            <p className="font-semibold text-gray-900 text-sm truncate">{b.purpose}</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {format(new Date(b.start), 'HH:mm')} – {format(new Date(b.end), 'HH:mm')}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">{b.bookedByName}</p>
+          </div>
+          <button
+            onClick={() => handleDelete(b)}
+            disabled={deleting === b.id}
+            className="p-1.5 text-gray-300 hover:text-red-400 rounded-lg flex-shrink-0 transition-colors"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   function DayBtn({ day }: { day: Date }) {
     const bks = bookingsOnDay(day)
     const selected = isSameDay(day, selectedDay)
@@ -239,7 +268,7 @@ export default function Car() {
         )}
       </div>
 
-      {view !== 'day' && (
+      {view === 'day' && (
         <p className="text-sm font-semibold text-gray-700">{selectedLabel}</p>
       )}
 
@@ -248,45 +277,48 @@ export default function Car() {
         <div className="space-y-2">
           {[1, 2].map(i => <div key={i} className="bg-white rounded-2xl h-20 animate-pulse shadow-sm" />)}
         </div>
-      ) : dayBookings.length === 0 ? (
-        <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
-          <div className="text-4xl mb-3">🚗</div>
-          <p className="text-gray-500 text-sm">{s.noBookings}</p>
-          <button onClick={() => setShowModal(true)} className="mt-3 text-sm text-indigo-600 font-medium hover:text-indigo-800">
-            {s.bookTheCarArrow}
-          </button>
-        </div>
+      ) : view === 'day' ? (
+        // Day view: selected day's bookings
+        dayBookings.length === 0 ? (
+          <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
+            <div className="text-4xl mb-3">🚗</div>
+            <p className="text-gray-500 text-sm">{s.noBookings}</p>
+            <button onClick={() => setShowModal(true)} className="mt-3 text-sm text-indigo-600 font-medium hover:text-indigo-800">
+              {s.bookTheCarArrow}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {dayBookings.map(b => <BookingCard key={b.id} b={b} />)}
+          </div>
+        )
       ) : (
-        <div className="space-y-2">
-          {dayBookings.map(b => {
-            const color = colorForEmail(b.bookedBy)
-            const carOption = CAR_OPTIONS.find(c => c.id === b.carId) ?? CAR_OPTIONS[0]
-            return (
-              <div key={b.id} className={`rounded-2xl p-4 shadow-sm border ${color} bg-white`}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-base">{carOption.emoji}</span>
-                      <span className="text-xs font-semibold text-gray-700">{carOption.label}</span>
-                    </div>
-                    <p className="font-semibold text-gray-900 text-sm truncate">{b.purpose}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {format(new Date(b.start), 'HH:mm')} – {format(new Date(b.end), 'HH:mm')}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">{b.bookedByName}</p>
+        // Week/Month view: all bookings grouped by day
+        bookings.length === 0 ? (
+          <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
+            <div className="text-4xl mb-3">🚗</div>
+            <p className="text-gray-500 text-sm">{s.noBookings}</p>
+            <button onClick={() => setShowModal(true)} className="mt-3 text-sm text-indigo-600 font-medium hover:text-indigo-800">
+              {s.bookTheCarArrow}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {(view === 'week' ? weekDays : monthDays).map(day => {
+              const dayBks = bookingsOnDay(day)
+              if (dayBks.length === 0) return null
+              const dayLbl = isToday(day) ? s.today : format(day, lang === 'he' ? 'EEEE, d/M' : 'EEEE, MMM d')
+              return (
+                <div key={day.toISOString()}>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">{dayLbl}</p>
+                  <div className="space-y-2">
+                    {dayBks.map(b => <BookingCard key={b.id} b={b} />)}
                   </div>
-                  <button
-                    onClick={() => handleDelete(b)}
-                    disabled={deleting === b.id}
-                    className="p-1.5 text-gray-300 hover:text-red-400 rounded-lg flex-shrink-0 transition-colors"
-                  >
-                    <Trash2 size={14} />
-                  </button>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )
       )}
 
       {showModal && (
