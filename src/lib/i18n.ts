@@ -55,10 +55,14 @@ const strings = {
     noEventsRange: 'No events in this range',
     noEventsDay: 'No events',
     scheduleSomething: 'Schedule something →',
+    viewDay: 'Day',
+    viewWeek: 'Week',
+    viewMonth: 'Month',
 
     // Car
     carPageTitle: '🚗 Family Car',
     bookCar: 'Book',
+    noBookings: 'No bookings',
     noBookingsWeek: 'No bookings this week',
     bookTheCarArrow: 'Book the car →',
 
@@ -169,9 +173,13 @@ const strings = {
     noEventsRange: 'אין אירועים בטווח זה',
     noEventsDay: 'אין אירועים',
     scheduleSomething: 'תכנן משהו ←',
+    viewDay: 'יום',
+    viewWeek: 'שבוע',
+    viewMonth: 'חודש',
 
     carPageTitle: '🚗 רכב משפחתי',
     bookCar: 'הזמן',
+    noBookings: 'אין הזמנות',
     noBookingsWeek: 'אין הזמנות השבוע',
     bookTheCarArrow: 'הזמן את הרכב ←',
 
