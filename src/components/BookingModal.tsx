@@ -74,7 +74,7 @@ export default function BookingModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-t-3xl w-full max-w-md max-h-[92vh] flex flex-col"
+        className="bg-white rounded-t-3xl w-full max-w-md max-h-[92dvh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex-1 overflow-y-auto p-5 space-y-5 min-h-0">
