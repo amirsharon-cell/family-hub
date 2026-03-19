@@ -225,6 +225,13 @@ export async function deleteFamilyEvent(calendarId: string, eventId: string): Pr
   )
 }
 
+// ─── Car owner notifications ──────────────────────────────────────────────────
+
+const CAR_OWNER_EMAIL: Record<string, string> = {
+  'kia-ev3': 'Sheli.sharon@gmail.com',
+  'aion-v':  'amir.sharon@gmail.com',
+}
+
 // ─── Car bookings ─────────────────────────────────────────────────────────────
 
 export async function fetchCarBookings(calendarId: string, timeMin: string, timeMax: string): Promise<CarBooking[]> {
@@ -244,14 +251,16 @@ export async function createCarBooking(
   calendarId: string,
   booking: { purpose: string; carId: CarId; start: string; end: string; bookedByName: string }
 ): Promise<CarBooking> {
+  const ownerEmail = CAR_OWNER_EMAIL[booking.carId]
   const body = {
     summary: `[Car] ${booking.purpose}`,
     description: JSON.stringify({ purpose: booking.purpose, carId: booking.carId, bookedByName: booking.bookedByName }),
     start: { dateTime: booking.start },
     end: { dateTime: booking.end },
+    attendees: ownerEmail ? [{ email: ownerEmail }] : undefined,
   }
   const created = await api<GCalEvent>(
-    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events`,
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=all`,
     { method: 'POST', body: JSON.stringify(body) }
   )
   return toCarBooking(created)
@@ -262,14 +271,17 @@ export async function updateCarBooking(
   eventId: string,
   booking: { purpose: string; carId: CarId; start: string; end: string; bookedByName: string }
 ): Promise<CarBooking> {
+  const ownerEmail = CAR_OWNER_EMAIL[booking.carId]
   const body = {
     summary: `[Car] ${booking.purpose}`,
     description: JSON.stringify({ purpose: booking.purpose, carId: booking.carId, bookedByName: booking.bookedByName }),
     start: { dateTime: booking.start },
     end: { dateTime: booking.end },
+    attendees: ownerEmail ? [{ email: ownerEmail }] : undefined,
+    sendUpdates: 'all',
   }
   const updated = await api<GCalEvent>(
-    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${eventId}?sendUpdates=all`,
     { method: 'PUT', body: JSON.stringify(body) }
   )
   return toCarBooking(updated)
