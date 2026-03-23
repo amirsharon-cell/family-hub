@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Calendar, Car, Settings } from 'lucide-react'
+import { Home, Calendar, Car, Settings, ClipboardList } from 'lucide-react'
 import { useLang } from '../App'
 
 export default function BottomNav() {
@@ -8,6 +8,7 @@ export default function BottomNav() {
   const tabs = [
     { to: '/', icon: Home, label: s.navHome },
     { to: '/events', icon: Calendar, label: s.navEvents },
+    { to: '/chores', icon: ClipboardList, label: s.navChores },
     { to: '/car', icon: Car, label: s.navCar },
     { to: '/settings', icon: Settings, label: s.navSettings },
   ]
@@ -28,7 +29,7 @@ export default function BottomNav() {
           >
             {({ isActive }) => (
               <>
-                <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
                 <span>{label}</span>
               </>
             )}

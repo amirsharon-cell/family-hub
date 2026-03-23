@@ -7,6 +7,7 @@ export interface User {
 export interface CalendarIds {
   events: string  // "Family Hub" calendar ID
   car: string     // "Family Car" calendar ID
+  chores?: string
 }
 
 export const EVENT_TYPES = {
@@ -54,4 +55,38 @@ export interface CarBooking {
   bookedBy: string
   bookedByName: string
   htmlLink?: string
+}
+
+export const CHORE_TYPES = {
+  garbage:            { label: 'Take out garbage',    heLabel: 'הוצא אשפה',            emoji: '🗑️', weight: 1 },
+  'dishwasher-load':  { label: 'Load dishwasher',     heLabel: 'טען מדיח כלים',         emoji: '🍽️', weight: 1 },
+  'dishwasher-unload':{ label: 'Unload dishwasher',   heLabel: 'פרוק מדיח כלים',        emoji: '🥣', weight: 1 },
+  'dog-walk':         { label: 'Walk Tuti',            heLabel: 'צא לטיול עם טוטי',      emoji: '🐕', weight: 2 },
+  vacuum:             { label: 'Vacuum',               heLabel: 'שאיבת אבק',             emoji: '🧹', weight: 2 },
+  mop:                { label: 'Mop floors',           heLabel: 'שטיפת רצפה',            emoji: '🪣', weight: 2 },
+  laundry:            { label: 'Do laundry',           heLabel: 'כביסה',                 emoji: '🧺', weight: 2 },
+  bathroom:           { label: 'Clean bathroom',       heLabel: 'ניקוי חדר אמבטיה',      emoji: '🚿', weight: 3 },
+  groceries:          { label: 'Grocery shopping',     heLabel: 'קניות מכולת',           emoji: '🛒', weight: 2 },
+  custom:             { label: 'Custom task',          heLabel: 'משימה מותאמת',          emoji: '📝', weight: 1 },
+} as const
+
+export type ChoreType = keyof typeof CHORE_TYPES
+
+export const FAMILY_MEMBERS = {
+  yonatan: { name: 'Yonatan', heName: 'יונתן', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  mika:    { name: 'Mika',    heName: 'מיקה',  color: 'bg-pink-100 text-pink-700 border-pink-200' },
+} as const
+
+export type AssigneeId = keyof typeof FAMILY_MEMBERS
+
+export interface ChoreItem {
+  id: string
+  title: string
+  choreType: ChoreType
+  assignedTo: AssigneeId
+  dueDate: string       // YYYY-MM-DD
+  completed: boolean
+  completedAt?: string  // ISO datetime when completed
+  weight: number        // 1=light, 2=medium, 3=heavy
+  notes?: string
 }

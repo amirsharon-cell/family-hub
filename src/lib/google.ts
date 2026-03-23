@@ -1,5 +1,5 @@
-import { EVENT_TYPES, CAR_OPTIONS } from '../types'
-import type { FamilyEvent, CarBooking, EventType, CarId } from '../types'
+import { EVENT_TYPES, CAR_OPTIONS, CHORE_TYPES, FAMILY_MEMBERS } from '../types'
+import type { FamilyEvent, CarBooking, EventType, CarId, ChoreItem, ChoreType, AssigneeId } from '../types'
 
 const CLIENT_ID = '953894951691-4i23ee5aoks1iehjisg6m1nmhbjl8bkl.apps.googleusercontent.com'
 const SCOPES = 'https://www.googleapis.com/auth/calendar openid profile email'
@@ -292,4 +292,80 @@ export async function deleteCarBooking(calendarId: string, eventId: string): Pro
     `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
     { method: 'DELETE' }
   )
+}
+
+// ─── Chores ───────────────────────────────────────────────────────────────────
+
+function toChoreItem(e: GCalEvent): ChoreItem {
+  let choreType: ChoreType = 'custom'
+  let assignedTo: AssigneeId = 'yonatan'
+  let weight = 1
+  let completed = false
+  let completedAt: string | undefined
+  let notes: string | undefined
+  let title = e.summary
+
+  try {
+    const meta = JSON.parse(e.description ?? '{}')
+    if (meta.choreType && meta.choreType in CHORE_TYPES) choreType = meta.choreType as ChoreType
+    if (meta.assignedTo && meta.assignedTo in FAMILY_MEMBERS) assignedTo = meta.assignedTo as AssigneeId
+    if (meta.weight) weight = meta.weight
+    if (meta.completed !== undefined) completed = meta.completed
+    if (meta.completedAt) completedAt = meta.completedAt
+    if (meta.notes) notes = meta.notes
+    if (meta.title) title = meta.title
+  } catch { /* ignore */ }
+
+  return {
+    id: e.id,
+    title,
+    choreType,
+    assignedTo,
+    dueDate: e.start.date ?? e.start.dateTime?.slice(0, 10) ?? '',
+    completed,
+    completedAt,
+    weight,
+    notes,
+  }
+}
+
+export async function fetchChores(calendarId: string, timeMin: string, timeMax: string): Promise<ChoreItem[]> {
+  const params = new URLSearchParams({ orderBy: 'startTime', singleEvents: 'true', timeMin, timeMax })
+  const data = await api<{ items: GCalEvent[] }>(
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events?${params}`
+  )
+  return (data.items ?? []).map(toChoreItem)
+}
+
+function choreBody(chore: Omit<ChoreItem, 'id'>) {
+  const meta = CHORE_TYPES[chore.choreType]
+  return {
+    summary: `${meta.emoji} ${chore.title}`,
+    description: JSON.stringify({
+      title: chore.title, choreType: chore.choreType, assignedTo: chore.assignedTo,
+      weight: chore.weight, completed: chore.completed, completedAt: chore.completedAt, notes: chore.notes,
+    }),
+    start: { date: chore.dueDate },
+    end: { date: chore.dueDate },
+  }
+}
+
+export async function createChore(calendarId: string, chore: Omit<ChoreItem, 'id'>): Promise<ChoreItem> {
+  const created = await api<GCalEvent>(
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events`,
+    { method: 'POST', body: JSON.stringify(choreBody(chore)) }
+  )
+  return toChoreItem(created)
+}
+
+export async function updateChore(calendarId: string, choreId: string, chore: Omit<ChoreItem, 'id'>): Promise<ChoreItem> {
+  const updated = await api<GCalEvent>(
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${choreId}`,
+    { method: 'PUT', body: JSON.stringify(choreBody(chore)) }
+  )
+  return toChoreItem(updated)
+}
+
+export async function deleteChore(calendarId: string, choreId: string): Promise<void> {
+  await api<void>(`${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${choreId}`, { method: 'DELETE' })
 }

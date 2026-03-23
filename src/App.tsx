@@ -10,6 +10,7 @@ import Home from './pages/Home'
 import Events from './pages/Events'
 import Car from './pages/Car'
 import Settings from './pages/Settings'
+import Chores from './pages/Chores'
 import BottomNav from './components/BottomNav'
 
 // ─── App context ──────────────────────────────────────────────────────────────
@@ -127,6 +128,7 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/events" element={<Events />} />
+                  <Route path="/chores" element={<Chores />} />
                   <Route path="/car" element={<Car />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
