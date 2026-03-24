@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
-import { format, startOfDay, addDays, isToday, isTomorrow } from 'date-fns'
-import { Plus, Car } from 'lucide-react'
-import { fetchEvents, fetchCarBookings } from '../lib/google'
+import { format, startOfDay, endOfDay, addDays, isToday, isTomorrow } from 'date-fns'
+import { Plus, Car, CheckCircle2, Circle, ClipboardList } from 'lucide-react'
+import { fetchEvents, fetchCarBookings, fetchChores, updateChore } from '../lib/google'
 import { useApp } from '../App'
 import { useLang } from '../App'
-import type { FamilyEvent, CarBooking } from '../types'
-import { EVENT_TYPES, CAR_OPTIONS } from '../types'
+import type { FamilyEvent, CarBooking, ChoreItem } from '../types'
+import { EVENT_TYPES, CAR_OPTIONS, CHORE_TYPES, FAMILY_MEMBERS } from '../types'
 import type { Strings } from '../lib/i18n'
 import EventModal from '../components/EventModal'
 import BookingModal from '../components/BookingModal'
+import { NavLink } from 'react-router-dom'
 
 function dayLabel(dateStr: string, s: Strings, lang: string) {
   const d = new Date(dateStr)
@@ -22,9 +23,11 @@ export default function Home() {
   const { lang, s } = useLang()
   const [events, setEvents] = useState<FamilyEvent[]>([])
   const [carBookings, setCarBookings] = useState<CarBooking[]>([])
+  const [todayChores, setTodayChores] = useState<ChoreItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showEventModal, setShowEventModal] = useState(false)
   const [showCarModal, setShowCarModal] = useState(false)
+  const [togglingChore, setTogglingChore] = useState<string | null>(null)
 
   const load = async () => {
     if (!calendarIds) return
@@ -32,12 +35,17 @@ export default function Home() {
     try {
       const now = new Date()
       const end = addDays(now, 7)
-      const [evs, bookings] = await Promise.all([
+      const fetches: Promise<unknown>[] = [
         fetchEvents(calendarIds.events, startOfDay(now).toISOString(), end.toISOString()),
         fetchCarBookings(calendarIds.car, startOfDay(now).toISOString(), end.toISOString()),
-      ])
-      setEvents(evs)
-      setCarBookings(bookings)
+      ]
+      if (calendarIds.chores) {
+        fetches.push(fetchChores(calendarIds.chores, startOfDay(now).toISOString(), endOfDay(now).toISOString()))
+      }
+      const results = await Promise.all(fetches)
+      setEvents(results[0] as FamilyEvent[])
+      setCarBookings(results[1] as CarBooking[])
+      if (calendarIds.chores) setTodayChores(results[2] as ChoreItem[])
     } catch (e) {
       console.error(e)
     } finally {
@@ -47,11 +55,29 @@ export default function Home() {
 
   useEffect(() => { load() }, [calendarIds])
 
+  async function handleToggleChore(chore: ChoreItem) {
+    if (!calendarIds?.chores) return
+    setTogglingChore(chore.id)
+    try {
+      await updateChore(calendarIds.chores, chore.id, {
+        ...chore,
+        completed: !chore.completed,
+        completedAt: !chore.completed ? new Date().toISOString() : undefined,
+      })
+      await load()
+    } finally {
+      setTogglingChore(null)
+    }
+  }
+
   const firstName = user?.name?.split(' ')[0] ?? 'there'
   const todayStr = format(new Date(), lang === 'he' ? 'EEEE, d/M/yyyy' : 'EEEE, MMMM d')
 
   // Car status today
   const todayBooking = carBookings.find((b) => isToday(new Date(b.start)))
+
+  const pendingChores = todayChores.filter(c => !c.completed)
+  const doneChores = todayChores.filter(c => c.completed)
 
   return (
     <div className="p-4 space-y-4">
@@ -97,6 +123,67 @@ export default function Home() {
           {s.bookArrow}
         </button>
       </div>
+
+      {/* Today's chores — only shown if calendar is set up and there are chores */}
+      {calendarIds?.chores && todayChores.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <ClipboardList size={16} className="text-gray-500" />
+              <h2 className="font-semibold text-gray-900">
+                {lang === 'he' ? 'מטלות היום' : "Today's Chores"}
+              </h2>
+              {pendingChores.length > 0 && (
+                <span className="text-xs bg-indigo-100 text-indigo-700 font-medium px-2 py-0.5 rounded-full">
+                  {pendingChores.length}
+                </span>
+              )}
+            </div>
+            <NavLink
+              to="/chores"
+              className="text-xs text-indigo-600 font-medium hover:text-indigo-800"
+            >
+              {lang === 'he' ? 'כל המטלות ←' : 'All chores →'}
+            </NavLink>
+          </div>
+
+          <div className="space-y-2">
+            {todayChores.map(chore => {
+              const meta = CHORE_TYPES[chore.choreType]
+              const member = FAMILY_MEMBERS[chore.assignedTo]
+              return (
+                <div
+                  key={chore.id}
+                  className={`bg-white rounded-2xl p-3 shadow-sm flex items-center gap-3 transition-opacity ${chore.completed ? 'opacity-50' : ''}`}
+                >
+                  <button
+                    onClick={() => handleToggleChore(chore)}
+                    disabled={togglingChore === chore.id}
+                    className="flex-shrink-0 text-gray-300 hover:text-indigo-600 transition-colors disabled:opacity-50"
+                  >
+                    {chore.completed
+                      ? <CheckCircle2 size={22} className="text-green-500" />
+                      : <Circle size={22} />}
+                  </button>
+                  <span className="text-lg flex-shrink-0">{meta.emoji}</span>
+                  <p className={`flex-1 text-sm font-medium min-w-0 truncate ${chore.completed ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                    {chore.title}
+                  </p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full border font-medium flex-shrink-0 ${member.color}`}>
+                    {lang === 'he' ? member.heName : member.name}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {doneChores.length > 0 && pendingChores.length === 0 && (
+            <p className="text-xs text-green-600 font-medium text-center mt-2">
+              {lang === 'he' ? '✅ כל המטלות בוצעו היום!' : '✅ All chores done for today!'}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Upcoming events */}
       <div>
