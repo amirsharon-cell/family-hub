@@ -294,6 +294,13 @@ export async function deleteCarBooking(calendarId: string, eventId: string): Pro
   )
 }
 
+// ─── Chore assignee emails ────────────────────────────────────────────────────
+
+const ASSIGNEE_EMAIL: Record<string, string> = {
+  yonatan: 'yonatan.sharon@gmail.com',
+  mika:    'mik.sharon@gmail.com',
+}
+
 // ─── Chores ───────────────────────────────────────────────────────────────────
 
 function toChoreItem(e: GCalEvent): ChoreItem {
@@ -339,6 +346,7 @@ export async function fetchChores(calendarId: string, timeMin: string, timeMax: 
 
 function choreBody(chore: Omit<ChoreItem, 'id'>) {
   const meta = CHORE_TYPES[chore.choreType]
+  const assigneeEmail = ASSIGNEE_EMAIL[chore.assignedTo]
   return {
     summary: `${meta.emoji} ${chore.title}`,
     description: JSON.stringify({
@@ -347,12 +355,13 @@ function choreBody(chore: Omit<ChoreItem, 'id'>) {
     }),
     start: { date: chore.dueDate },
     end: { date: chore.dueDate },
+    attendees: assigneeEmail ? [{ email: assigneeEmail }] : undefined,
   }
 }
 
 export async function createChore(calendarId: string, chore: Omit<ChoreItem, 'id'>): Promise<ChoreItem> {
   const created = await api<GCalEvent>(
-    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events`,
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=all`,
     { method: 'POST', body: JSON.stringify(choreBody(chore)) }
   )
   return toChoreItem(created)
@@ -360,7 +369,7 @@ export async function createChore(calendarId: string, chore: Omit<ChoreItem, 'id
 
 export async function updateChore(calendarId: string, choreId: string, chore: Omit<ChoreItem, 'id'>): Promise<ChoreItem> {
   const updated = await api<GCalEvent>(
-    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${choreId}`,
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${choreId}?sendUpdates=all`,
     { method: 'PUT', body: JSON.stringify(choreBody(chore)) }
   )
   return toChoreItem(updated)
