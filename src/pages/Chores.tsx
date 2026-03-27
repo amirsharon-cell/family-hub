@@ -32,7 +32,12 @@ export default function Chores() {
       const timeMax = addDays(now, 60).toISOString()
       const items = await fetchChores(choreCalId, timeMin, timeMax)
       setChores(items)
-    } catch (e) {
+    } catch (e: unknown) {
+      const msg = String(e)
+      // Calendar was deleted — clear the stored ID so setup screen appears
+      if (msg.includes('404') || msg.includes('Not Found') || msg.includes('notFound')) {
+        setCalendarIds({ ...calendarIds!, chores: undefined })
+      }
       console.error(e)
     } finally {
       setLoading(false)
