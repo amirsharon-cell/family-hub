@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { listCalendars, createCalendar } from '../lib/google'
+import { listCalendars, createCalendar, shareCalendarWithUser, FAMILY_EMAILS } from '../lib/google'
 import { useApp } from '../App'
 import { useLang } from '../App'
 
@@ -8,6 +8,7 @@ type Step = 'scan' | 'found' | 'create' | 'manual'
 interface Found {
   events: string
   car: string
+  chores?: string
 }
 
 export default function Setup() {
@@ -27,8 +28,9 @@ export default function Setup() {
       const cals = await listCalendars()
       const evCal = cals.find((c) => c.summary === 'Family Hub')
       const carCal = cals.find((c) => c.summary === 'Family Car')
+      const choresCal = cals.find((c) => c.summary === 'Family Chores')
       if (evCal && carCal) {
-        setFound({ events: evCal.id, car: carCal.id })
+        setFound({ events: evCal.id, car: carCal.id, chores: choresCal?.id })
         setStep('found')
       } else {
         setStep('create')
@@ -47,6 +49,7 @@ export default function Setup() {
       const cals = await listCalendars()
       let evId = cals.find((c) => c.summary === 'Family Hub')?.id
       let carId = cals.find((c) => c.summary === 'Family Car')?.id
+      let choresId = cals.find((c) => c.summary === 'Family Chores')?.id
       if (!evId) {
         const ev = await createCalendar('Family Hub', 'Shared family events')
         evId = ev.id
@@ -55,7 +58,13 @@ export default function Setup() {
         const car = await createCalendar('Family Car', 'Family car bookings')
         carId = car.id
       }
-      setCalendarIds({ events: evId, car: carId })
+      if (!choresId) {
+        const chores = await createCalendar('Family Chores', 'Family home chores and tasks')
+        choresId = chores.id
+        // Auto-share with all family members
+        await Promise.all(FAMILY_EMAILS.map(email => shareCalendarWithUser(choresId!, email)))
+      }
+      setCalendarIds({ events: evId, car: carId, chores: choresId })
     } catch (e) {
       setError(String(e))
     } finally {

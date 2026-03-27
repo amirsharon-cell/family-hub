@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { format, startOfDay, addDays, subDays, isToday, isTomorrow } from 'date-fns'
 import { Plus, Trash2, Pencil, CheckCircle2, Circle } from 'lucide-react'
-import { fetchChores, createChore, updateChore, deleteChore, createCalendar, listCalendars } from '../lib/google'
+import { fetchChores, createChore, updateChore, deleteChore, createCalendar, listCalendars, shareCalendarWithUser, FAMILY_EMAILS } from '../lib/google'
 import { useApp, useLang } from '../App'
 import type { ChoreItem, AssigneeId } from '../types'
 import { CHORE_TYPES, FAMILY_MEMBERS } from '../types'
@@ -49,6 +49,8 @@ export default function Chores() {
       if (!choreId) {
         const created = await createCalendar('Family Chores', 'Family home chores and tasks')
         choreId = created.id
+        // Auto-share with all family members so everyone can see chores
+        await Promise.all(FAMILY_EMAILS.map(email => shareCalendarWithUser(choreId!, email)))
       }
       setCalendarIds({ ...calendarIds!, chores: choreId })
     } catch (e) {

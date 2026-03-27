@@ -107,6 +107,24 @@ export async function createCalendar(summary: string, description: string): Prom
   })
 }
 
+// Share a calendar with a user (writer access) so it appears in their calendar list
+export async function shareCalendarWithUser(calendarId: string, email: string): Promise<void> {
+  try {
+    await api<void>(`${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/acl`, {
+      method: 'POST',
+      body: JSON.stringify({ role: 'writer', scope: { type: 'user', value: email } }),
+    })
+  } catch { /* ignore — may already be shared */ }
+}
+
+// All known family emails — used to auto-share new calendars
+export const FAMILY_EMAILS = [
+  'sheli.sharon@gmail.com',
+  'amir.sharon@gmail.com',
+  'yonatan.sharon@gmail.com',
+  'mik.sharon@gmail.com',
+]
+
 // ─── Events ───────────────────────────────────────────────────────────────────
 
 interface GCalEvent {
