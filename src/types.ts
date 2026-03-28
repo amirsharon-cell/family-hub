@@ -90,3 +90,14 @@ export interface ChoreItem {
   weight: number        // 1=light, 2=medium, 3=heavy
   notes?: string
 }
+
+export interface WorkSession {
+  id: string
+  worker: AssigneeId
+  date: string    // YYYY-MM-DD (derived from start)
+  start: string   // ISO datetime
+  end: string     // ISO datetime
+  hours: number   // (end - start) in decimal hours, rounded to 2dp
+  notes?: string
+  htmlLink?: string
+}

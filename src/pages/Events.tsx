@@ -45,7 +45,7 @@ export default function Events() {
         end = addDays(endOfMonth(navDate), 1)
       }
       const evs = await fetchEvents(calendarIds.events, start.toISOString(), end.toISOString())
-      setEvents(evs)
+      setEvents(evs.filter(ev => !ev.title.startsWith('[Work]')))
     } catch (e) {
       console.error(e)
     } finally {

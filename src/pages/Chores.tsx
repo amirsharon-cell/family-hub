@@ -1,27 +1,35 @@
 import { useState, useEffect } from 'react'
-import { format, startOfDay, addDays, subDays, isToday, isTomorrow } from 'date-fns'
-import { Plus, Trash2, Pencil, CheckCircle2, Circle } from 'lucide-react'
-import { fetchChores, createChore, updateChore, deleteChore, createCalendar, listCalendars, shareCalendarWithUser, FAMILY_EMAILS } from '../lib/google'
+import { format, startOfDay, addDays, subDays, isToday, isTomorrow, subYears } from 'date-fns'
+import { Plus, Trash2, Pencil, CheckCircle2, Circle, Briefcase } from 'lucide-react'
+import { fetchChores, createChore, updateChore, deleteChore, createCalendar, listCalendars, shareCalendarWithUser, FAMILY_EMAILS, fetchWorkSessions, createWorkSession, deleteWorkSession } from '../lib/google'
 import { useApp, useLang } from '../App'
-import type { ChoreItem, AssigneeId } from '../types'
+import type { ChoreItem, AssigneeId, WorkSession } from '../types'
 import { CHORE_TYPES, FAMILY_MEMBERS } from '../types'
 import ChoreModal from '../components/ChoreModal'
+import WorkModal from '../components/WorkModal'
+
+type Tab = 'chores' | 'work'
 
 export default function Chores() {
   const { calendarIds, setCalendarIds } = useApp()
   const { lang, s } = useLang()
 
+  const [tab, setTab] = useState<Tab>('chores')
   const [chores, setChores] = useState<ChoreItem[]>([])
+  const [workSessions, setWorkSessions] = useState<WorkSession[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [showWorkModal, setShowWorkModal] = useState(false)
   const [editingChore, setEditingChore] = useState<ChoreItem | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [deletingWork, setDeletingWork] = useState<string | null>(null)
   const [toggling, setToggling] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'yonatan' | 'mika'>('all')
   const [showCompleted, setShowCompleted] = useState(false)
   const [creatingCalendar, setCreatingCalendar] = useState(false)
 
   const choreCalId = calendarIds?.chores
+  const eventCalId = calendarIds?.events
 
   async function load() {
     if (!choreCalId) { setLoading(false); return }
@@ -30,8 +38,18 @@ export default function Chores() {
       const now = new Date()
       const timeMin = subDays(now, 14).toISOString()
       const timeMax = addDays(now, 60).toISOString()
-      const items = await fetchChores(choreCalId, timeMin, timeMax)
-      setChores(items)
+      const workTimeMin = subYears(now, 1).toISOString()
+      const workTimeMax = addDays(now, 1).toISOString()
+
+      const fetches: Promise<unknown>[] = [
+        fetchChores(choreCalId, timeMin, timeMax),
+      ]
+      if (eventCalId) {
+        fetches.push(fetchWorkSessions(eventCalId, workTimeMin, workTimeMax))
+      }
+      const results = await Promise.all(fetches)
+      setChores(results[0] as ChoreItem[])
+      if (eventCalId) setWorkSessions(results[1] as WorkSession[])
     } catch (e: unknown) {
       const msg = String(e)
       // Calendar was deleted — clear the stored ID so setup screen appears
@@ -44,7 +62,7 @@ export default function Chores() {
     }
   }
 
-  useEffect(() => { load() }, [choreCalId])
+  useEffect(() => { load() }, [choreCalId, eventCalId])
 
   async function handleSetupCalendar() {
     setCreatingCalendar(true)
@@ -105,6 +123,26 @@ export default function Chores() {
     }
   }
 
+  async function handleSaveWork(data: { worker: AssigneeId; start: string; end: string; notes?: string }) {
+    if (!eventCalId) return
+    await createWorkSession(eventCalId, data)
+    setShowWorkModal(false)
+    await load()
+  }
+
+  async function handleDeleteWork(session: WorkSession) {
+    if (!eventCalId) return
+    const memberName = lang === 'he' ? FAMILY_MEMBERS[session.worker].heName : FAMILY_MEMBERS[session.worker].name
+    if (!confirm(s.deleteWork(memberName))) return
+    setDeletingWork(session.id)
+    try {
+      await deleteWorkSession(eventCalId, session.id)
+      await load()
+    } finally {
+      setDeletingWork(null)
+    }
+  }
+
   // Fairness scores (pending chores in next 14 days)
   const today = startOfDay(new Date())
   const horizon = addDays(today, 14)
@@ -139,6 +177,16 @@ export default function Chores() {
     if (existing) existing.chores.push(chore)
     else groups.push({ label, chores: [chore] })
   }
+
+  // Work points totals
+  const workPoints: Record<AssigneeId, number> = {
+    yonatan: workSessions.filter(s => s.worker === 'yonatan').reduce((acc, s) => acc + s.hours, 0),
+    mika:    workSessions.filter(s => s.worker === 'mika').reduce((acc, s) => acc + s.hours, 0),
+  }
+  const maxPoints = Math.max(workPoints.yonatan, workPoints.mika, 1)
+
+  // Sorted work sessions (newest first)
+  const sortedWorkSessions = [...workSessions].sort((a, b) => b.start.localeCompare(a.start))
 
   function ChoreCard({ c }: { c: ChoreItem }) {
     const meta = CHORE_TYPES[c.choreType]
@@ -223,59 +271,43 @@ export default function Chores() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">{s.choresTitle}</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-indigo-700 transition-colors"
-        >
-          <Plus size={16} /> {s.addChore}
-        </button>
+        {tab === 'chores' ? (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            <Plus size={16} /> {s.addChore}
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowWorkModal(true)}
+            className="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            <Plus size={16} /> {s.logWork}
+          </button>
+        )}
       </div>
 
-      {/* Fairness balance bar */}
-      {totalScore > 0 && (
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 mb-3">{s.fairnessTitle}</p>
-          <div className="flex gap-3 items-center">
-            <span className="text-xs font-medium text-blue-700 w-16 text-right">
-              {lang === 'he' ? FAMILY_MEMBERS.yonatan.heName : FAMILY_MEMBERS.yonatan.name}
-            </span>
-            <div className="flex-1 flex h-3 rounded-full overflow-hidden bg-gray-100 gap-px">
-              <div
-                className="bg-blue-400 rounded-l-full transition-all"
-                style={{ width: `${totalScore > 0 ? (scores.yonatan / totalScore) * 100 : 50}%` }}
-              />
-              <div
-                className="bg-pink-400 rounded-r-full transition-all"
-                style={{ width: `${totalScore > 0 ? (scores.mika / totalScore) * 100 : 50}%` }}
-              />
-            </div>
-            <span className="text-xs font-medium text-pink-700 w-16">
-              {lang === 'he' ? FAMILY_MEMBERS.mika.heName : FAMILY_MEMBERS.mika.name}
-            </span>
-          </div>
-          <div className="flex justify-between mt-1 px-16">
-            <span className="text-xs text-gray-400">{s.fairnessPts(scores.yonatan)}</span>
-            <span className="text-xs text-gray-400">{s.fairnessPts(scores.mika)}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Filter tabs */}
+      {/* Tab toggle */}
       <div className="bg-gray-100 rounded-2xl p-1 flex gap-1">
-        {(['all', 'yonatan', 'mika'] as const).map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={[
-              'flex-1 py-1.5 rounded-xl text-sm font-medium transition-colors',
-              filter === f ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500',
-            ].join(' ')}
-          >
-            {f === 'all'
-              ? (lang === 'he' ? 'הכל' : 'All')
-              : (lang === 'he' ? FAMILY_MEMBERS[f].heName : FAMILY_MEMBERS[f].name)}
-          </button>
-        ))}
+        <button
+          onClick={() => setTab('chores')}
+          className={[
+            'flex-1 py-1.5 rounded-xl text-sm font-medium transition-colors',
+            tab === 'chores' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500',
+          ].join(' ')}
+        >
+          {lang === 'he' ? 'מטלות' : 'Chores'}
+        </button>
+        <button
+          onClick={() => setTab('work')}
+          className={[
+            'flex items-center justify-center gap-1.5 flex-1 py-1.5 rounded-xl text-sm font-medium transition-colors',
+            tab === 'work' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500',
+          ].join(' ')}
+        >
+          <Briefcase size={14} /> {s.workLog}
+        </button>
       </div>
 
       {/* Loading */}
@@ -285,61 +317,207 @@ export default function Chores() {
         </div>
       )}
 
-      {/* Pending chores grouped by date */}
-      {!loading && groups.length === 0 && completedChores.length === 0 && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm text-center space-y-2">
-          <p className="text-gray-400 text-sm">{s.noChoresPending}</p>
+      {/* ── Chores tab ── */}
+      {!loading && tab === 'chores' && (
+        <>
+          {/* Fairness balance bar */}
+          {totalScore > 0 && (
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <p className="text-xs font-medium text-gray-500 mb-3">{s.fairnessTitle}</p>
+              <div className="flex gap-3 items-center">
+                <span className="text-xs font-medium text-blue-700 w-16 text-right">
+                  {lang === 'he' ? FAMILY_MEMBERS.yonatan.heName : FAMILY_MEMBERS.yonatan.name}
+                </span>
+                <div className="flex-1 flex h-3 rounded-full overflow-hidden bg-gray-100 gap-px">
+                  <div
+                    className="bg-blue-400 rounded-l-full transition-all"
+                    style={{ width: `${totalScore > 0 ? (scores.yonatan / totalScore) * 100 : 50}%` }}
+                  />
+                  <div
+                    className="bg-pink-400 rounded-r-full transition-all"
+                    style={{ width: `${totalScore > 0 ? (scores.mika / totalScore) * 100 : 50}%` }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-pink-700 w-16">
+                  {lang === 'he' ? FAMILY_MEMBERS.mika.heName : FAMILY_MEMBERS.mika.name}
+                </span>
+              </div>
+              <div className="flex justify-between mt-1 px-16">
+                <span className="text-xs text-gray-400">{s.fairnessPts(scores.yonatan)}</span>
+                <span className="text-xs text-gray-400">{s.fairnessPts(scores.mika)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Filter tabs */}
+          <div className="bg-gray-100 rounded-2xl p-1 flex gap-1">
+            {(['all', 'yonatan', 'mika'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={[
+                  'flex-1 py-1.5 rounded-xl text-sm font-medium transition-colors',
+                  filter === f ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500',
+                ].join(' ')}
+              >
+                {f === 'all'
+                  ? (lang === 'he' ? 'הכל' : 'All')
+                  : (lang === 'he' ? FAMILY_MEMBERS[f].heName : FAMILY_MEMBERS[f].name)}
+              </button>
+            ))}
+          </div>
+
+          {/* Pending chores grouped by date */}
+          {groups.length === 0 && completedChores.length === 0 && (
+            <div className="bg-white rounded-2xl p-6 shadow-sm text-center space-y-2">
+              <p className="text-gray-400 text-sm">{s.noChoresPending}</p>
+              <button
+                onClick={() => setShowModal(true)}
+                className="text-indigo-600 text-sm font-medium"
+              >
+                {s.addFirstChore}
+              </button>
+            </div>
+          )}
+
+          {groups.map(group => (
+            <div key={group.label} className="space-y-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1">{group.label}</p>
+              {group.chores.map(c => <ChoreCard key={c.id} c={c} />)}
+            </div>
+          ))}
+
+          {/* Show completed toggle */}
           <button
-            onClick={() => setShowModal(true)}
-            className="text-indigo-600 text-sm font-medium"
+            onClick={() => setShowCompleted(v => !v)}
+            className="text-xs text-gray-400 hover:text-gray-600 font-medium px-1"
           >
-            {s.addFirstChore}
+            {showCompleted ? '▾' : '▸'} {s.showCompleted}
+            {completedChores.length > 0 && ` (${completedChores.length})`}
           </button>
-        </div>
+
+          {/* Completed chores */}
+          {showCompleted && completedChores.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1">{s.completed}</p>
+              {completedChores.map(c => <ChoreCard key={c.id} c={c} />)}
+            </div>
+          )}
+        </>
       )}
 
-      {!loading && groups.map(group => (
-        <div key={group.label} className="space-y-2">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1">{group.label}</p>
-          {group.chores.map(c => <ChoreCard key={c.id} c={c} />)}
-        </div>
-      ))}
+      {/* ── Work Log tab ── */}
+      {!loading && tab === 'work' && (
+        <>
+          {/* Points summary */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+            <p className="text-xs font-medium text-gray-500">{s.totalPoints}</p>
+            {(['yonatan', 'mika'] as AssigneeId[]).map(id => {
+              const member = FAMILY_MEMBERS[id]
+              const pts = Math.round(workPoints[id] * 10) / 10
+              return (
+                <div key={id} className="flex items-center gap-3">
+                  <span className={`text-xs font-medium w-16 text-right ${id === 'yonatan' ? 'text-blue-700' : 'text-pink-700'}`}>
+                    {lang === 'he' ? member.heName : member.name}
+                  </span>
+                  <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${id === 'yonatan' ? 'bg-blue-400' : 'bg-pink-400'}`}
+                      style={{ width: `${(workPoints[id] / maxPoints) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-600 font-semibold w-14">
+                    {s.workPoints(pts)}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
 
-      {/* Show completed toggle */}
-      {!loading && (
-        <button
-          onClick={() => setShowCompleted(v => !v)}
-          className="text-xs text-gray-400 hover:text-gray-600 font-medium px-1"
-        >
-          {showCompleted ? '▾' : '▸'} {s.showCompleted}
-          {completedChores.length > 0 && ` (${completedChores.length})`}
-        </button>
+          {/* Work session list */}
+          {sortedWorkSessions.length === 0 ? (
+            <div className="bg-white rounded-2xl p-6 shadow-sm text-center space-y-2">
+              <p className="text-gray-400 text-sm">{s.noWorkSessions}</p>
+              <button
+                onClick={() => setShowWorkModal(true)}
+                className="text-indigo-600 text-sm font-medium"
+              >
+                {s.logFirstSession}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sortedWorkSessions.map(session => {
+                const member = FAMILY_MEMBERS[session.worker]
+                const startFmt = format(new Date(session.start), 'HH:mm')
+                const endFmt = format(new Date(session.end), 'HH:mm')
+                const dateFmt = format(new Date(session.start), lang === 'he' ? 'd/M/yyyy' : 'MMM d, yyyy')
+                return (
+                  <div key={session.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl mt-0.5">💼</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${member.color}`}>
+                                {lang === 'he' ? member.heName : member.name}
+                              </span>
+                              <span className="text-xs text-gray-500">{dateFmt}</span>
+                            </div>
+                            <p className="text-sm text-gray-700 mt-1">
+                              {startFmt}–{endFmt}
+                              {' · '}
+                              <span className="font-semibold text-indigo-600">{s.workPoints(session.hours)}</span>
+                            </p>
+                            {session.notes && (
+                              <p className="text-xs text-gray-400 italic mt-0.5">{session.notes}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleDeleteWork(session)}
+                            disabled={deletingWork === session.id}
+                            className="p-1.5 text-gray-300 hover:text-red-400 rounded-lg transition-colors flex-shrink-0 disabled:opacity-50"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Completed chores */}
-      {showCompleted && completedChores.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1">{s.completed}</p>
-          {completedChores.map(c => <ChoreCard key={c.id} c={c} />)}
-        </div>
-      )}
-
-      {/* Add modal */}
+      {/* Add chore modal */}
       {showModal && (
         <ChoreModal
           allChores={chores}
+          workSessions={workSessions}
           onClose={() => setShowModal(false)}
           onSaved={handleSave}
         />
       )}
 
-      {/* Edit modal */}
+      {/* Edit chore modal */}
       {editingChore && (
         <ChoreModal
           chore={editingChore}
           allChores={chores}
+          workSessions={workSessions}
           onClose={() => setEditingChore(null)}
           onSaved={handleSave}
+        />
+      )}
+
+      {/* Work modal */}
+      {showWorkModal && (
+        <WorkModal
+          onClose={() => setShowWorkModal(false)}
+          onSaved={handleSaveWork}
         />
       )}
     </div>

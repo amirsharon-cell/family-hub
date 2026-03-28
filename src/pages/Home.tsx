@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { format, startOfDay, endOfDay, addDays, isToday, isTomorrow } from 'date-fns'
+import { format, startOfDay, endOfDay, addDays, subYears, isToday, isTomorrow } from 'date-fns'
 import { Plus, Car, CheckCircle2, Circle, ClipboardList } from 'lucide-react'
-import { fetchEvents, fetchCarBookings, fetchChores, updateChore } from '../lib/google'
+import { fetchEvents, fetchCarBookings, fetchChores, updateChore, fetchWorkSessions } from '../lib/google'
 import { useApp } from '../App'
 import { useLang } from '../App'
-import type { FamilyEvent, CarBooking, ChoreItem } from '../types'
+import type { FamilyEvent, CarBooking, ChoreItem, WorkSession, AssigneeId } from '../types'
 import { EVENT_TYPES, CAR_OPTIONS, CHORE_TYPES, FAMILY_MEMBERS } from '../types'
 import type { Strings } from '../lib/i18n'
 import EventModal from '../components/EventModal'
@@ -24,6 +24,7 @@ export default function Home() {
   const [events, setEvents] = useState<FamilyEvent[]>([])
   const [carBookings, setCarBookings] = useState<CarBooking[]>([])
   const [todayChores, setTodayChores] = useState<ChoreItem[]>([])
+  const [workSessions, setWorkSessions] = useState<WorkSession[]>([])
   const [loading, setLoading] = useState(true)
   const [showEventModal, setShowEventModal] = useState(false)
   const [showCarModal, setShowCarModal] = useState(false)
@@ -38,14 +39,16 @@ export default function Home() {
       const fetches: Promise<unknown>[] = [
         fetchEvents(calendarIds.events, startOfDay(now).toISOString(), end.toISOString()),
         fetchCarBookings(calendarIds.car, startOfDay(now).toISOString(), end.toISOString()),
+        fetchWorkSessions(calendarIds.events, subYears(now, 1).toISOString(), now.toISOString()),
       ]
       if (calendarIds.chores) {
         fetches.push(fetchChores(calendarIds.chores, startOfDay(now).toISOString(), endOfDay(now).toISOString()))
       }
       const results = await Promise.all(fetches)
-      setEvents(results[0] as FamilyEvent[])
+      setEvents((results[0] as FamilyEvent[]).filter(ev => !ev.title.startsWith('[Work]')))
       setCarBookings(results[1] as CarBooking[])
-      if (calendarIds.chores) setTodayChores(results[2] as ChoreItem[])
+      setWorkSessions(results[2] as WorkSession[])
+      if (calendarIds.chores) setTodayChores(results[3] as ChoreItem[])
     } catch (e) {
       console.error(e)
     } finally {
@@ -75,6 +78,14 @@ export default function Home() {
 
   // Car status today
   const todayBooking = carBookings.find((b) => isToday(new Date(b.start)))
+
+  // Work points
+  const workPoints: Record<AssigneeId, number> = {
+    yonatan: workSessions.filter(ws => ws.worker === 'yonatan').reduce((acc, ws) => acc + ws.hours, 0),
+    mika:    workSessions.filter(ws => ws.worker === 'mika').reduce((acc, ws) => acc + ws.hours, 0),
+  }
+  const maxWorkPoints = Math.max(workPoints.yonatan, workPoints.mika, 1)
+  const hasWorkSessions = workSessions.length > 0
 
   const pendingChores = todayChores.filter(c => !c.completed)
   const doneChores = todayChores.filter(c => c.completed)
@@ -123,6 +134,40 @@ export default function Home() {
           {s.bookArrow}
         </button>
       </div>
+
+      {/* Work Points widget */}
+      {calendarIds?.events && hasWorkSessions && (
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">💼</span>
+            <h2 className="font-semibold text-gray-900 text-sm">
+              {lang === 'he' ? 'נקודות עבודה' : 'Work Points'}
+            </h2>
+          </div>
+          <div className="space-y-2">
+            {(['yonatan', 'mika'] as AssigneeId[]).map(id => {
+              const member = FAMILY_MEMBERS[id]
+              const pts = Math.round(workPoints[id] * 10) / 10
+              return (
+                <div key={id} className="flex items-center gap-3">
+                  <span className={`text-xs font-medium w-14 text-right ${id === 'yonatan' ? 'text-blue-700' : 'text-pink-700'}`}>
+                    {lang === 'he' ? member.heName : member.name}
+                  </span>
+                  <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${id === 'yonatan' ? 'bg-blue-400' : 'bg-pink-400'}`}
+                      style={{ width: `${(workPoints[id] / maxWorkPoints) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-semibold text-gray-600 w-14">
+                    {pts} {lang === 'he' ? "נק'" : 'pts'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Today's chores — only shown if calendar is set up and there are chores */}
       {calendarIds?.chores && todayChores.length > 0 && (

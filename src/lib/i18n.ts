@@ -153,6 +153,24 @@ const strings = {
     completed: 'Completed',
     pending: 'Pending',
     showCompleted: 'Show completed',
+
+    // Work Log
+    workLog: 'Work Log',
+    logWork: 'Log Work',
+    addWorkSession: 'Log Work Session',
+    worker: 'Who worked?',
+    workDate: 'Date',
+    workFrom: 'From',
+    workUntil: 'Until',
+    workNotes: 'Notes (e.g. employer, job type)',
+    workNotesPlaceholder: 'e.g. Babysitting, café shift…',
+    workHours: (h: number) => `${h} hrs`,
+    workPoints: (p: number) => `${p} pts`,
+    totalPoints: 'Total points',
+    noWorkSessions: 'No work sessions logged',
+    logFirstSession: 'Log the first one →',
+    deleteWork: (name: string) => `Delete work session for ${name}?`,
+    workedOn: (date: string) => `Works on ${date} — consider rescheduling`,
   },
 
   he: {
@@ -294,6 +312,24 @@ const strings = {
     completed: 'בוצע',
     pending: 'ממתין',
     showCompleted: 'הצג מבוצעות',
+
+    // Work Log
+    workLog: 'יומן עבודה',
+    logWork: 'דווח עבודה',
+    addWorkSession: 'רשום יום עבודה',
+    worker: 'מי עבד?',
+    workDate: 'תאריך',
+    workFrom: 'מ-',
+    workUntil: 'עד',
+    workNotes: 'הערות (מעסיק, סוג עבודה)',
+    workNotesPlaceholder: 'לדוגמה: בייביסיטינג, משמרת בבית קפה…',
+    workHours: (h: number) => `${h} שעות`,
+    workPoints: (p: number) => `${p} נק'`,
+    totalPoints: 'סה"כ נקודות',
+    noWorkSessions: 'לא נרשמו ימי עבודה',
+    logFirstSession: 'רשום את הראשון ←',
+    deleteWork: (name: string) => `למחוק את יום העבודה של ${name}?`,
+    workedOn: (date: string) => `עובד ב-${date} — שקול לדחות`,
   },
 } as const
 

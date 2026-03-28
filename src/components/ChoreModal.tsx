@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { X } from 'lucide-react'
 import { format, addDays, startOfDay } from 'date-fns'
 import { useApp, useLang } from '../App'
-import type { ChoreItem, ChoreType, AssigneeId } from '../types'
+import type { ChoreItem, ChoreType, AssigneeId, WorkSession } from '../types'
 import { CHORE_TYPES, FAMILY_MEMBERS } from '../types'
 import CalendarPicker from './CalendarPicker'
 
@@ -43,11 +43,13 @@ function suggestAssignee(chores: ChoreItem[], choreType: ChoreType): AssigneeId 
 export default function ChoreModal({
   chore,
   allChores,
+  workSessions,
   onClose,
   onSaved,
 }: {
   chore?: ChoreItem
   allChores: ChoreItem[]
+  workSessions?: WorkSession[]
   onClose: () => void
   onSaved: (saved: Omit<ChoreItem, 'id'>) => Promise<void>
 }) {
@@ -72,6 +74,12 @@ export default function ChoreModal({
   const [notes, setNotes] = useState(chore?.notes ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // Check if assigned person has work on the selected due date
+  const dueDateStr = format(dueDate, 'yyyy-MM-dd')
+  const workerHasWorkOnDay = workSessions?.some(
+    ws => ws.worker === assignedTo && ws.date === dueDateStr
+  ) ?? false
 
   function handleTypeChange(t: ChoreType) {
     setChoreType(t)
@@ -193,6 +201,16 @@ export default function ChoreModal({
             <p className="text-xs font-medium text-gray-500 mb-3">{s.choreDue}</p>
             <CalendarPicker value={dueDate} onChange={setDueDate} />
           </div>
+
+          {/* Work conflict warning */}
+          {workerHasWorkOnDay && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+              <span className="text-amber-500 text-sm">⚠️</span>
+              <p className="text-amber-700 text-sm">
+                {s.workedOn(format(dueDate, lang === 'he' ? 'd/M/yyyy' : 'MMM d'))}
+              </p>
+            </div>
+          )}
 
           {/* Effort level */}
           <div>

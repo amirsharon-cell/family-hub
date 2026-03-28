@@ -1,5 +1,5 @@
 import { EVENT_TYPES, CAR_OPTIONS, CHORE_TYPES, FAMILY_MEMBERS } from '../types'
-import type { FamilyEvent, CarBooking, EventType, CarId, ChoreItem, ChoreType, AssigneeId } from '../types'
+import type { FamilyEvent, CarBooking, EventType, CarId, ChoreItem, ChoreType, AssigneeId, WorkSession } from '../types'
 
 const CLIENT_ID = '953894951691-4i23ee5aoks1iehjisg6m1nmhbjl8bkl.apps.googleusercontent.com'
 const SCOPES = 'https://www.googleapis.com/auth/calendar openid profile email'
@@ -395,4 +395,75 @@ export async function updateChore(calendarId: string, choreId: string, chore: Om
 
 export async function deleteChore(calendarId: string, choreId: string): Promise<void> {
   await api<void>(`${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${choreId}`, { method: 'DELETE' })
+}
+
+// ─── Work sessions ────────────────────────────────────────────────────────────
+
+const WORKER_EMOJI: Record<string, string> = {
+  yonatan: '🧑',
+  mika:    '👧',
+}
+
+function toWorkSession(e: GCalEvent): WorkSession | null {
+  if (!e.summary.startsWith('[Work]')) return null
+  let worker: AssigneeId = 'yonatan'
+  let notes: string | undefined
+  try {
+    const meta = JSON.parse(e.description ?? '{}')
+    if (meta.worker && meta.worker in FAMILY_MEMBERS) worker = meta.worker as AssigneeId
+    if (meta.notes) notes = meta.notes
+  } catch { /* ignore */ }
+  const start = e.start.dateTime ?? ''
+  const end = e.end.dateTime ?? ''
+  const hours = start && end
+    ? Math.round((new Date(end).getTime() - new Date(start).getTime()) / 360000) / 10
+    : 0
+  return {
+    id: e.id,
+    worker,
+    date: start.slice(0, 10),
+    start,
+    end,
+    hours,
+    notes,
+    htmlLink: e.htmlLink,
+  }
+}
+
+export async function fetchWorkSessions(calendarId: string, timeMin: string, timeMax: string): Promise<WorkSession[]> {
+  const params = new URLSearchParams({ orderBy: 'startTime', singleEvents: 'true', timeMin, timeMax })
+  const data = await api<{ items: GCalEvent[] }>(
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events?${params}`
+  )
+  return (data.items ?? []).flatMap(e => {
+    const s = toWorkSession(e)
+    return s ? [s] : []
+  })
+}
+
+export async function createWorkSession(
+  calendarId: string,
+  session: Omit<WorkSession, 'id' | 'htmlLink' | 'date' | 'hours'>
+): Promise<WorkSession> {
+  const member = FAMILY_MEMBERS[session.worker]
+  const workerEmail = session.worker === 'yonatan' ? 'yonatan.sharon@gmail.com' : 'mik.sharon@gmail.com'
+  const body = {
+    summary: `[Work] ${WORKER_EMOJI[session.worker]} ${member.name}`,
+    description: JSON.stringify({ worker: session.worker, notes: session.notes }),
+    start: { dateTime: session.start },
+    end: { dateTime: session.end },
+    attendees: [{ email: workerEmail }],
+  }
+  const created = await api<GCalEvent>(
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events?sendUpdates=all`,
+    { method: 'POST', body: JSON.stringify(body) }
+  )
+  return toWorkSession(created)!
+}
+
+export async function deleteWorkSession(calendarId: string, sessionId: string): Promise<void> {
+  await api<void>(
+    `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${sessionId}`,
+    { method: 'DELETE' }
+  )
 }
