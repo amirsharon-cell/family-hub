@@ -11,7 +11,7 @@ import WorkModal from '../components/WorkModal'
 type Tab = 'chores' | 'work'
 
 export default function Chores() {
-  const { calendarIds, setCalendarIds } = useApp()
+  const { calendarIds, setCalendarIds, refreshSignal } = useApp()
   const { lang, s } = useLang()
 
   const [tab, setTab] = useState<Tab>('chores')
@@ -62,7 +62,7 @@ export default function Chores() {
     }
   }
 
-  useEffect(() => { load() }, [choreCalId, eventCalId])
+  useEffect(() => { load() }, [choreCalId, eventCalId, refreshSignal])
 
   async function handleSetupCalendar() {
     setCreatingCalendar(true)

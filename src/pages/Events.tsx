@@ -14,7 +14,7 @@ import EventModal from '../components/EventModal'
 type ViewMode = 'day' | 'week' | 'month'
 
 export default function Events() {
-  const { calendarIds } = useApp()
+  const { calendarIds, refreshSignal } = useApp()
   const { lang, s } = useLang()
   const isRtl = lang === 'he'
   const weekStartsOn = 0 as const
@@ -53,7 +53,7 @@ export default function Events() {
     }
   }
 
-  useEffect(() => { load() }, [calendarIds, view, navDate])
+  useEffect(() => { load() }, [calendarIds, view, navDate, refreshSignal])
 
   async function handleDelete(ev: FamilyEvent) {
     if (!calendarIds || !confirm(s.deleteEvent(ev.title))) return

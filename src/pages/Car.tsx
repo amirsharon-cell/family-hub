@@ -31,7 +31,7 @@ function colorForEmail(email: string) {
 }
 
 export default function Car() {
-  const { calendarIds } = useApp()
+  const { calendarIds, refreshSignal } = useApp()
   const { lang, s } = useLang()
   const isRtl = lang === 'he'
   const weekStartsOn = 0 as const
@@ -70,7 +70,7 @@ export default function Car() {
     }
   }
 
-  useEffect(() => { load() }, [calendarIds, view, navDate])
+  useEffect(() => { load() }, [calendarIds, view, navDate, refreshSignal])
 
   async function handleDelete(b: CarBooking) {
     if (!calendarIds || !confirm(s.deleteBooking(b.purpose))) return

@@ -4,6 +4,7 @@ import type { FamilyEvent, CarBooking, EventType, CarId, ChoreItem, ChoreType, A
 const CLIENT_ID = '953894951691-4i23ee5aoks1iehjisg6m1nmhbjl8bkl.apps.googleusercontent.com'
 const SCOPES = 'https://www.googleapis.com/auth/calendar openid profile email'
 const CAL_BASE = 'https://www.googleapis.com/calendar/v3'
+const HINT_KEY = 'fh_gauth_hint'
 
 // ─── Token management ────────────────────────────────────────────────────────
 
@@ -48,7 +49,18 @@ export async function initAuth(onToken: (token: string | null) => void): Promise
         _onToken?.(null)
       }
     },
+    error_callback: () => {
+      _onToken?.(null)
+    },
   })
+
+  // Attempt silent re-auth if user previously signed in
+  const hint = localStorage.getItem(HINT_KEY)
+  if (hint) {
+    _tokenClient.requestAccessToken({ prompt: '', hint })
+  } else {
+    onToken(null)
+  }
 }
 
 export function signIn() {
@@ -59,7 +71,10 @@ export function signOut() {
   const g = (window as unknown as { google?: { accounts?: { oauth2?: { revoke: (t: string, cb: () => void) => void } } } }).google
   if (_token) g?.accounts?.oauth2?.revoke(_token, () => {})
   _token = null
+  localStorage.removeItem(HINT_KEY)
 }
+
+export { HINT_KEY }
 
 export function getToken() {
   return _token
@@ -209,6 +224,13 @@ export async function createFamilyEvent(
     location: event.location,
     start: event.allDay ? { date: event.start.slice(0, 10) } : { dateTime: event.start },
     end: event.allDay ? { date: event.end.slice(0, 10) } : { dateTime: event.end },
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'email', minutes: 1440 },
+        { method: 'popup', minutes: 15 },
+      ],
+    },
   }
   const created = await api<GCalEvent>(
     `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events`,
@@ -228,6 +250,13 @@ export async function updateFamilyEvent(
     location: event.location,
     start: event.allDay ? { date: event.start.slice(0, 10) } : { dateTime: event.start },
     end: event.allDay ? { date: event.end.slice(0, 10) } : { dateTime: event.end },
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'email', minutes: 1440 },
+        { method: 'popup', minutes: 15 },
+      ],
+    },
   }
   const updated = await api<GCalEvent>(
     `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
@@ -374,6 +403,13 @@ function choreBody(chore: Omit<ChoreItem, 'id'>) {
     start: { date: chore.dueDate },
     end: { date: chore.dueDate },
     attendees: assigneeEmail ? [{ email: assigneeEmail }] : undefined,
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'email', minutes: 1440 },   // email 1 day before
+        { method: 'popup', minutes: 0 },       // popup at start of day
+      ],
+    },
   }
 }
 

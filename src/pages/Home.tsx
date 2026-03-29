@@ -19,7 +19,7 @@ function dayLabel(dateStr: string, s: Strings, lang: string) {
 }
 
 export default function Home() {
-  const { user, calendarIds } = useApp()
+  const { user, calendarIds, refreshSignal } = useApp()
   const { lang, s } = useLang()
   const [events, setEvents] = useState<FamilyEvent[]>([])
   const [carBookings, setCarBookings] = useState<CarBooking[]>([])
@@ -56,7 +56,7 @@ export default function Home() {
     }
   }
 
-  useEffect(() => { load() }, [calendarIds])
+  useEffect(() => { load() }, [calendarIds, refreshSignal])
 
   async function handleToggleChore(chore: ChoreItem) {
     if (!calendarIds?.chores) return

@@ -1,9 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { initAuth, getUserInfo, signOut as gSignOut } from './lib/google'
+import { initAuth, getUserInfo, signOut as gSignOut, HINT_KEY } from './lib/google'
 import { getStrings } from './lib/i18n'
 import type { Lang, Strings } from './lib/i18n'
 import type { User, CalendarIds } from './types'
+import { useRegisterSW } from 'virtual:pwa-register/react'
 import Login from './pages/Login'
 import Setup from './pages/Setup'
 import Home from './pages/Home'
@@ -21,6 +22,7 @@ interface AppContextType {
   calendarIds: CalendarIds | null
   setCalendarIds: (ids: CalendarIds) => void
   handleSignOut: () => void
+  refreshSignal: number
 }
 
 const AppContext = createContext<AppContextType>({} as AppContextType)
@@ -43,6 +45,8 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
+  const [refreshSignal, setRefreshSignal] = useState(0)
+  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW()
   const [calendarIds, setCalendarIdsState] = useState<CalendarIds | null>(() => {
     try {
       const saved = localStorage.getItem('family-hub-calendars')
@@ -75,6 +79,7 @@ export default function App() {
       try {
         const info = await getUserInfo()
         setUser(info)
+        localStorage.setItem(HINT_KEY, info.email)
       } catch {
         setUser(null)
       }
@@ -87,6 +92,14 @@ export default function App() {
   useEffect(() => {
     initAuth(onToken).finally(() => setAuthReady(true))
   }, [onToken])
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setRefreshSignal(n => n + 1)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
 
   function setCalendarIds(ids: CalendarIds) {
     setCalendarIdsState(ids)
@@ -112,7 +125,7 @@ export default function App() {
 
   return (
     <LangContext.Provider value={{ lang, setLang, s }}>
-      <AppContext.Provider value={{ user, token, calendarIds, setCalendarIds, handleSignOut }}>
+      <AppContext.Provider value={{ user, token, calendarIds, setCalendarIds, handleSignOut, refreshSignal }}>
         <BrowserRouter basename={basename}>
           {!token ? (
             <Routes>
@@ -139,6 +152,17 @@ export default function App() {
           )}
         </BrowserRouter>
       </AppContext.Provider>
+      {needRefresh && (
+        <div className="fixed top-0 inset-x-0 z-[100] bg-indigo-600 text-white text-sm text-center py-2 px-4 flex items-center justify-center gap-3">
+          <span>{lang === 'he' ? 'עדכון זמין' : 'Update available'}</span>
+          <button
+            onClick={() => updateServiceWorker(true)}
+            className="underline font-medium"
+          >
+            {lang === 'he' ? 'טען מחדש' : 'Reload'}
+          </button>
+        </div>
+      )}
     </LangContext.Provider>
   )
 }
