@@ -135,6 +135,13 @@ export default function Events() {
   const weekStart = startOfWeek(navDate, { weekStartsOn })
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
+  // Event list: only show today+ unless user tapped a past date
+  const pastDaySelected = selectedDay < today
+  const displayDays = pastDaySelected
+    ? [selectedDay]
+    : (view === 'week' ? weekDays : monthDays).filter(d => d >= today)
+  const hasVisibleEvents = displayDays.some(d => eventsOnDay(d).length > 0)
+
   function EventCard({ ev }: { ev: FamilyEvent }) {
     const meta = EVENT_TYPES[ev.type]
     const typeLabel = lang === 'he' ? meta.heLabel : meta.label
@@ -316,8 +323,8 @@ export default function Events() {
           </div>
         )
       ) : (
-        // Week/Month view: all events grouped by day
-        events.length === 0 ? (
+        // Week/Month view: today+ only (or selected past day if user tapped one)
+        !hasVisibleEvents ? (
           <div className="bg-white rounded-2xl p-5 text-center shadow-sm">
             <p className="text-gray-400 text-sm">{s.noEventsDay}</p>
             <button onClick={() => setShowModal(true)} className="mt-2 text-sm text-indigo-600 font-medium hover:text-indigo-800">
@@ -326,7 +333,7 @@ export default function Events() {
           </div>
         ) : (
           <div className="space-y-4">
-            {(view === 'week' ? weekDays : monthDays).map(day => {
+            {displayDays.map(day => {
               const dayEvs = eventsOnDay(day)
               if (dayEvs.length === 0) return null
               const dayLbl = isToday(day) ? s.today : format(day, lang === 'he' ? 'EEEE, d/M' : 'EEEE, MMM d')
