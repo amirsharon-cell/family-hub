@@ -4,6 +4,7 @@ import { initAuth, getUserInfo, signOut as gSignOut, HINT_KEY } from './lib/goog
 import { getStrings } from './lib/i18n'
 import type { Lang, Strings } from './lib/i18n'
 import type { User, CalendarIds } from './types'
+import { ADMIN_EMAIL } from './types'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import Login from './pages/Login'
 import Setup from './pages/Setup'
@@ -19,6 +20,7 @@ import BottomNav from './components/BottomNav'
 interface AppContextType {
   user: User | null
   token: string | null
+  isAdmin: boolean
   calendarIds: CalendarIds | null
   setCalendarIds: (ids: CalendarIds) => void
   handleSignOut: () => void
@@ -140,7 +142,7 @@ export default function App() {
 
   return (
     <LangContext.Provider value={{ lang, setLang, s }}>
-      <AppContext.Provider value={{ user, token, calendarIds, setCalendarIds, handleSignOut, refreshSignal }}>
+      <AppContext.Provider value={{ user, token, isAdmin: user?.email === ADMIN_EMAIL, calendarIds, setCalendarIds, handleSignOut, refreshSignal }}>
         <BrowserRouter basename={basename}>
           {!token ? (
             <Routes>

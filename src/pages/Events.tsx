@@ -14,7 +14,7 @@ import EventModal from '../components/EventModal'
 type ViewMode = 'day' | 'week' | 'month'
 
 export default function Events() {
-  const { calendarIds, refreshSignal } = useApp()
+  const { calendarIds, refreshSignal, user, isAdmin } = useApp()
   const { lang, s } = useLang()
   const isRtl = lang === 'he'
   const weekStartsOn = 0 as const
@@ -145,6 +145,7 @@ export default function Events() {
   function EventCard({ ev }: { ev: FamilyEvent }) {
     const meta = EVENT_TYPES[ev.type]
     const typeLabel = lang === 'he' ? meta.heLabel : meta.label
+    const canEdit = isAdmin || user?.email === ev.createdBy
     return (
       <div className="bg-white rounded-2xl p-4 shadow-sm">
         <div className="flex items-start gap-3">
@@ -163,6 +164,7 @@ export default function Events() {
                 )}
                 {ev.notes && <p className="text-xs text-gray-500 mt-1 italic">{ev.notes}</p>}
               </div>
+              {canEdit && (
               <div className="flex gap-1 flex-shrink-0">
                 <button
                   onClick={() => setEditingEvent(ev)}
@@ -178,6 +180,7 @@ export default function Events() {
                   <Trash2 size={14} />
                 </button>
               </div>
+              )}
             </div>
             <span className={`inline-block mt-2 text-xs font-medium px-2 py-0.5 rounded-full border ${meta.color}`}>
               {typeLabel}

@@ -31,7 +31,7 @@ function colorForEmail(email: string) {
 }
 
 export default function Car() {
-  const { calendarIds, refreshSignal } = useApp()
+  const { calendarIds, refreshSignal, user, isAdmin } = useApp()
   const { lang, s } = useLang()
   const isRtl = lang === 'he'
   const weekStartsOn = 0 as const
@@ -141,6 +141,7 @@ export default function Car() {
   function BookingCard({ b }: { b: CarBooking }) {
     const color = colorForEmail(b.bookedBy)
     const carOption = CAR_OPTIONS.find(c => c.id === b.carId) ?? CAR_OPTIONS[0]
+    const canEdit = isAdmin || user?.email === b.bookedBy
     return (
       <div className={`rounded-2xl p-4 shadow-sm border ${color} bg-white`}>
         <div className="flex items-start justify-between gap-2">
@@ -155,6 +156,7 @@ export default function Car() {
             </p>
             <p className="text-xs text-gray-400 mt-0.5">{b.bookedByName}</p>
           </div>
+          {canEdit && (
           <div className="flex gap-1 flex-shrink-0">
             <button
               onClick={() => setEditingBooking(b)}
@@ -170,6 +172,7 @@ export default function Car() {
               <Trash2 size={14} />
             </button>
           </div>
+          )}
         </div>
       </div>
     )

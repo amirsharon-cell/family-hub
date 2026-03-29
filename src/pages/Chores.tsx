@@ -11,7 +11,8 @@ import WorkModal from '../components/WorkModal'
 type Tab = 'chores' | 'work'
 
 export default function Chores() {
-  const { calendarIds, setCalendarIds, refreshSignal } = useApp()
+  const { calendarIds, setCalendarIds, refreshSignal, user, isAdmin } = useApp()
+  const WORKER_EMAIL: Record<string, string> = { yonatan: 'yonatan.sharon@gmail.com', mika: 'mik.sharon@gmail.com' }
   const { lang, s } = useLang()
 
   const [tab, setTab] = useState<Tab>('chores')
@@ -474,6 +475,7 @@ export default function Chores() {
                               <p className="text-xs text-gray-400 italic mt-0.5">{session.notes}</p>
                             )}
                           </div>
+                          {(isAdmin || user?.email === WORKER_EMAIL[session.worker]) && (
                           <button
                             onClick={() => handleDeleteWork(session)}
                             disabled={deletingWork === session.id}
@@ -481,6 +483,7 @@ export default function Chores() {
                           >
                             <Trash2 size={14} />
                           </button>
+                          )}
                         </div>
                       </div>
                     </div>

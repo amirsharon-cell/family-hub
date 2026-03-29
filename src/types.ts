@@ -1,3 +1,5 @@
+export const ADMIN_EMAIL = 'amir.sharon@gmail.com'
+
 export interface User {
   name: string
   email: string
