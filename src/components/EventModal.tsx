@@ -128,7 +128,7 @@ export default function EventModal({
           <div>
             <p className="text-xs font-medium text-gray-500 mb-2">{s.eventType}</p>
             <div className="flex flex-wrap gap-2">
-              {(Object.entries(EVENT_TYPES) as [EventType, typeof EVENT_TYPES[EventType]][]).map(([key, meta]) => (
+              {(Object.entries(EVENT_TYPES) as [EventType, typeof EVENT_TYPES[EventType]][]).filter(([key]) => key !== 'work').map(([key, meta]) => (
                 <button
                   key={key}
                   type="button"

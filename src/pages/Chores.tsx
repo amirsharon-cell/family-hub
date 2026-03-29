@@ -39,7 +39,7 @@ export default function Chores() {
       const timeMin = subDays(now, 14).toISOString()
       const timeMax = addDays(now, 60).toISOString()
       const workTimeMin = subYears(now, 1).toISOString()
-      const workTimeMax = addDays(now, 1).toISOString()
+      const workTimeMax = addDays(now, 60).toISOString()
 
       const fetches: Promise<unknown>[] = [
         fetchChores(choreCalId, timeMin, timeMax),

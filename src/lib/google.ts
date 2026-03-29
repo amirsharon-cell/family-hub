@@ -162,11 +162,12 @@ function parseEventType(desc: string | undefined): EventType {
 }
 
 function toFamilyEvent(e: GCalEvent): FamilyEvent {
+  const isWork = e.summary.startsWith('[Work]')
   const allDay = !e.start.dateTime
   return {
     id: e.id,
-    title: e.summary,
-    type: parseEventType(e.description),
+    title: isWork ? e.summary.replace(/^\[Work\]\s*/, '') : e.summary,
+    type: isWork ? 'work' as EventType : parseEventType(e.description),
     start: e.start.dateTime ?? e.start.date ?? '',
     end: e.end.dateTime ?? e.end.date ?? '',
     allDay,

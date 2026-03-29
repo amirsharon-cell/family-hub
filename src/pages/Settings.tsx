@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { LogOut, Calendar, Car, Copy, Check, RefreshCw } from 'lucide-react'
+import { LogOut, Calendar, Car, Copy, Check, RefreshCw, Link2 } from 'lucide-react'
 import { useApp } from '../App'
 import { useLang } from '../App'
+import { shareCalendarWithUser, FAMILY_EMAILS } from '../lib/google'
 
 export default function Settings() {
   const { user, calendarIds, setCalendarIds, handleSignOut } = useApp()
@@ -10,6 +11,9 @@ export default function Settings() {
   const [carId, setCarId] = useState(calendarIds?.car ?? '')
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState<'events' | 'car' | null>(null)
+  const [sharing, setSharing] = useState(false)
+  const [sharesDone, setSharesDone] = useState(false)
+  const [joinLinkCopied, setJoinLinkCopied] = useState(false)
 
   function save() {
     if (!eventsId.trim() || !carId.trim()) return
@@ -22,6 +26,30 @@ export default function Settings() {
     await navigator.clipboard.writeText(text)
     setCopied(which)
     setTimeout(() => setCopied(null), 2000)
+  }
+
+  async function copyJoinLink() {
+    if (!calendarIds) return
+    const encoded = btoa(JSON.stringify(calendarIds))
+    const url = `${window.location.origin}${window.location.pathname.replace(/\/$/, '')}/?join=${encoded}`
+    await navigator.clipboard.writeText(url)
+    setJoinLinkCopied(true)
+    setTimeout(() => setJoinLinkCopied(false), 3000)
+  }
+
+  async function reshareAll() {
+    if (!calendarIds) return
+    setSharing(true)
+    try {
+      const cals = [calendarIds.events, calendarIds.car, calendarIds.chores].filter(Boolean) as string[]
+      await Promise.all(cals.flatMap(id => FAMILY_EMAILS.map(email => shareCalendarWithUser(id, email))))
+      setSharesDone(true)
+      setTimeout(() => setSharesDone(false), 3000)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSharing(false)
+    }
   }
 
   return (
@@ -115,6 +143,37 @@ export default function Settings() {
           className="w-full bg-indigo-600 text-white rounded-xl py-2.5 text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
         >
           {saved ? <><Check size={14} /> {s.saved}</> : <><RefreshCw size={14} /> {s.saveChanges}</>}
+        </button>
+      </div>
+
+      {/* Family sync */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+        <h2 className="font-semibold text-gray-900 flex items-center gap-2">
+          <Link2 size={16} className="text-indigo-600" />
+          {lang === 'he' ? 'שיתוף עם המשפחה' : 'Family Sync'}
+        </h2>
+        <p className="text-sm text-gray-500">
+          {lang === 'he'
+            ? 'שתף קישור עם שאר בני המשפחה כדי שכולם יתחברו לאותם לוחות שנה'
+            : 'Share a link with family members so everyone connects to the same calendars'}
+        </p>
+        <button
+          onClick={copyJoinLink}
+          disabled={!calendarIds}
+          className="w-full flex items-center justify-center gap-2 border border-indigo-200 text-indigo-600 rounded-xl py-2.5 text-sm font-medium hover:bg-indigo-50 transition-colors disabled:opacity-40"
+        >
+          {joinLinkCopied ? <><Check size={14} className="text-green-500" /> {lang === 'he' ? 'הועתק!' : 'Copied!'}</> : <><Copy size={14} /> {lang === 'he' ? 'העתק קישור הצטרפות' : 'Copy Join Link'}</>}
+        </button>
+        <button
+          onClick={reshareAll}
+          disabled={sharing || !calendarIds}
+          className="w-full flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 rounded-xl py-2.5 text-sm font-medium hover:bg-indigo-100 transition-colors disabled:opacity-40"
+        >
+          {sharesDone
+            ? <><Check size={14} className="text-green-500" /> {lang === 'he' ? 'שותף בהצלחה' : 'Reshared!'}</>
+            : sharing
+              ? (lang === 'he' ? 'משתף...' : 'Sharing...')
+              : <><RefreshCw size={14} /> {lang === 'he' ? 'שתף מחדש עם כל המשפחה' : 'Reshare with all family'}</>}
         </button>
       </div>
 

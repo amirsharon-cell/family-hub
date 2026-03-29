@@ -39,13 +39,13 @@ export default function Home() {
       const fetches: Promise<unknown>[] = [
         fetchEvents(calendarIds.events, startOfDay(now).toISOString(), end.toISOString()),
         fetchCarBookings(calendarIds.car, startOfDay(now).toISOString(), end.toISOString()),
-        fetchWorkSessions(calendarIds.events, subYears(now, 1).toISOString(), now.toISOString()),
+        fetchWorkSessions(calendarIds.events, subYears(now, 1).toISOString(), addDays(now, 60).toISOString()),
       ]
       if (calendarIds.chores) {
         fetches.push(fetchChores(calendarIds.chores, startOfDay(now).toISOString(), endOfDay(now).toISOString()))
       }
       const results = await Promise.all(fetches)
-      setEvents((results[0] as FamilyEvent[]).filter(ev => !ev.title.startsWith('[Work]')))
+      setEvents(results[0] as FamilyEvent[])
       setCarBookings(results[1] as CarBooking[])
       setWorkSessions(results[2] as WorkSession[])
       if (calendarIds.chores) setTodayChores(results[3] as ChoreItem[])

@@ -22,6 +22,7 @@ export const EVENT_TYPES = {
   party:       { label: 'Party',        heLabel: 'מסיבה',        emoji: '🎉', color: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200', dotColor: 'bg-fuchsia-400' },
   appointment: { label: 'Appointment',  heLabel: 'פגישה',        emoji: '📋', color: 'bg-slate-100   text-slate-700   border-slate-200',   dotColor: 'bg-slate-400'   },
   other:       { label: 'Other',        heLabel: 'אחר',          emoji: '📌', color: 'bg-gray-100    text-gray-700    border-gray-200',    dotColor: 'bg-gray-400'    },
+  work:        { label: 'Work',         heLabel: 'עבודה',        emoji: '💼', color: 'bg-teal-50    text-teal-700    border-teal-200',    dotColor: 'bg-teal-400'    },
 } as const
 
 export type EventType = keyof typeof EVENT_TYPES

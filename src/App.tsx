@@ -94,6 +94,21 @@ export default function App() {
   }, [onToken])
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const joinParam = params.get('join')
+    if (joinParam) {
+      try {
+        const ids = JSON.parse(atob(joinParam)) as CalendarIds
+        if (ids.events && ids.car) {
+          setCalendarIds(ids)
+          // Clean up the URL
+          window.history.replaceState({}, '', window.location.pathname)
+        }
+      } catch { /* ignore invalid param */ }
+    }
+  }, [])
+
+  useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible') setRefreshSignal(n => n + 1)
     }

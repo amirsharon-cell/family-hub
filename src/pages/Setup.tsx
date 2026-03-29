@@ -61,9 +61,13 @@ export default function Setup() {
       if (!choresId) {
         const chores = await createCalendar('Family Chores', 'Family home chores and tasks')
         choresId = chores.id
-        // Auto-share with all family members
-        await Promise.all(FAMILY_EMAILS.map(email => shareCalendarWithUser(choresId!, email)))
       }
+      // Share ALL calendars with all family members
+      await Promise.all(FAMILY_EMAILS.flatMap(email => [
+        shareCalendarWithUser(evId!, email),
+        shareCalendarWithUser(carId!, email),
+        shareCalendarWithUser(choresId!, email),
+      ]))
       setCalendarIds({ events: evId, car: carId, chores: choresId })
     } catch (e) {
       setError(String(e))
